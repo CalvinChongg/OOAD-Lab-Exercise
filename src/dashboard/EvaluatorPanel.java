@@ -85,9 +85,11 @@ public class EvaluatorPanel extends JPanel {
     }
 
     private JSlider addSlider(JPanel panel, String label, int y, GridBagConstraints gbc) {
+        //add text first
         gbc.gridx = 0; gbc.gridy = y;
         panel.add(new JLabel(label), gbc);
         
+        //add slider later
         JSlider slider = new JSlider(1, 10, 5);
         slider.setMajorTickSpacing(1);
         slider.setPaintTicks(true);
