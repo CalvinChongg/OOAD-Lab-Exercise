@@ -1,10 +1,10 @@
 package dao;
 
 import database.SQLiteConnection;
-import model.Submission;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+import model.Submission;
 
 public class SubmissionDAO {
     
@@ -36,7 +36,7 @@ public class SubmissionDAO {
     
     public List<Submission> getSubmissionsByStudent(int studentId) {
         List<Submission> submissions = new ArrayList<>();
-        String sql = "SELECT * FROM submissions WHERE student_id = ?";
+        String sql = "SELECT * FROM submissions WHERE id = ?";
         
         try (Connection conn = SQLiteConnection.connect();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {

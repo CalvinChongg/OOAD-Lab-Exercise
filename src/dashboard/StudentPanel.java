@@ -1,11 +1,11 @@
 package dashboard;
 
 import dao.SubmissionDAO;
-import dao.Submission;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
+import model.Submission;
 
 public class StudentPanel extends JPanel {
     private MainFrame mainFrame;
@@ -191,7 +191,7 @@ public class StudentPanel extends JPanel {
         
         // In real implementation, get actual student ID from logged-in user
         // For now, use a dummy ID (student1 has ID=5 in seeded data)
-        int studentId = 5;
+        int studentId = 1;
         
         SubmissionDAO dao = new SubmissionDAO();
         boolean success = dao.addSubmission(
@@ -228,7 +228,7 @@ public class StudentPanel extends JPanel {
     
     private void viewSubmissions(ActionEvent e) {
         // In real implementation, get actual student ID
-        int studentId = 5;
+        int studentId = 1;
         
         SubmissionDAO dao = new SubmissionDAO();
         var submissions = dao.getSubmissionsByStudent(studentId);
