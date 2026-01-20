@@ -245,6 +245,8 @@ public class StudentPanel extends JPanel {
                 Submission s = submissions.get(i);
                 sb.append(i + 1).append(". ").append(s.getTitle()).append("\n");
                 sb.append("   Type: ").append(s.getType()).append("\n");
+                sb.append("   Supervisor: ").append(s.getSupervisor().isEmpty() ? "N/A" : s.getSupervisor()).append("\n");
+                sb.append("   Status: ").append(s.getStatus()).append("\n");
                 sb.append("------------------------\n");
             }
             

@@ -49,8 +49,10 @@ public class SubmissionDAO {
                 String abstractText = rs.getString("abstract");
                 String type = rs.getString("presentation_type");
                 String filePath = rs.getString("file_path");
+                String supervisor_name = rs.getString("supervisor_name");
+                String status = rs.getString("status");
                 
-                submissions.add(new Submission(title, abstractText, type, filePath));
+                submissions.add(new Submission(title, abstractText, type, filePath, supervisor_name, status));
             }
             
         } catch (SQLException e) {
