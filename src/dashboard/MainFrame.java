@@ -14,7 +14,7 @@ public class MainFrame extends JFrame {
     // No arguments in constructor
     public MainFrame() {
         setTitle("Seminar Management System");
-        setSize(1000, 700);
+        setSize(1000, 800);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
 
