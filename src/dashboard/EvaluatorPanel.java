@@ -7,8 +7,8 @@ import javax.swing.table.*;
 
 public class EvaluatorPanel extends JPanel {
     private MainFrame mainFrame;
-    private JTable assignmentsTable, evaluationsTable;
-    private DefaultTableModel assignmentsTableModel, evaluationsTableModel;
+    private JTable assignmentsTable, completedTable;
+    private DefaultTableModel assignmentsTableModel, completedTableModel;
     
     public EvaluatorPanel(MainFrame mainFrame) {
         this.mainFrame = mainFrame;
@@ -23,22 +23,139 @@ public class EvaluatorPanel extends JPanel {
         JTabbedPane tabbedPane = new JTabbedPane();
         tabbedPane.setFont(new Font("Segoe UI", Font.BOLD, 14));
         
-        // Tab 1: Dashboard
-        tabbedPane.addTab("Dashboard", createDashboardPanel());
+        // Tab 1: Assigned Presentations (Reviews assigned presentations)
+        tabbedPane.addTab("Assigned Presentations", createAssignmentsPanel());
         
-        // Tab 2: Evaluation Tasks
-        tabbedPane.addTab("Evaluation Tasks", createEvaluationTasksPanel());
+        // Tab 2: Evaluation Form (Provides evaluation based on rubrics)
+        tabbedPane.addTab("Evaluate Presentation", createEvaluationFormPanel());
         
-        // Tab 3: Completed Evaluations
-        tabbedPane.addTab("Completed", createCompletedEvaluationsPanel());
-        
-        // Tab 4: Rubric
+        // Tab 3: Evaluation Rubric (Predefined rubrics for scoring)
         tabbedPane.addTab("Evaluation Rubric", createRubricPanel());
+        
+        // Tab 4: Completed Evaluations
+        tabbedPane.addTab("Completed", createCompletedPanel());
         
         add(tabbedPane, BorderLayout.CENTER);
         
         // Footer
         add(createFooterPanel(), BorderLayout.SOUTH);
+    }
+    
+    private JPanel createAssignmentsPanel() {
+        return createEvaluationTasksPanel();
+    }
+    
+    private JPanel createCompletedPanel() {
+        return createCompletedEvaluationsPanel();
+    }
+    
+    private JPanel createEvaluationFormPanel() {
+        JPanel panel = new JPanel(new BorderLayout(15, 15));
+        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        panel.setBackground(Color.WHITE);
+        
+        JLabel title = new JLabel("Evaluate Presentation");
+        title.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        title.setForeground(new Color(52, 73, 94));
+        
+        // Main form panel
+        JPanel formPanel = new JPanel(new BorderLayout(10, 10));
+        formPanel.setBorder(new CompoundBorder(
+            new LineBorder(new Color(220, 220, 220), 1),
+            BorderFactory.createEmptyBorder(20, 20, 20, 20)
+        ));
+        formPanel.setBackground(new Color(248, 249, 250));
+        
+        // Presentation info
+        JPanel infoPanel = new JPanel(new GridLayout(4, 2, 10, 10));
+        infoPanel.setBackground(new Color(248, 249, 250));
+        
+        infoPanel.add(new JLabel("Presenter:"));
+        infoPanel.add(new JLabel("John Doe"));
+        infoPanel.add(new JLabel("Title:"));
+        infoPanel.add(new JLabel("AI in Healthcare: A Comprehensive Review"));
+        infoPanel.add(new JLabel("Type:"));
+        infoPanel.add(new JLabel("Oral Presentation"));
+        infoPanel.add(new JLabel("Session:"));
+        infoPanel.add(new JLabel("SES-002: Oral Session A (10:30-10:45)"));
+        
+        // Rubric scoring panel
+        JPanel rubricPanel = new JPanel(new GridLayout(5, 3, 10, 10));
+        rubricPanel.setBorder(new TitledBorder("Evaluation Rubric (Score 1-10)"));
+        rubricPanel.setBackground(new Color(248, 249, 250));
+        
+        // Headers
+        rubricPanel.add(new JLabel("Criterion"));
+        rubricPanel.add(new JLabel("Score (1-10)"));
+        rubricPanel.add(new JLabel("Comments"));
+        
+        // Problem Clarity
+        rubricPanel.add(new JLabel("Problem Clarity"));
+        JSpinner claritySpinner = new JSpinner(new SpinnerNumberModel(7, 1, 10, 1));
+        rubricPanel.add(claritySpinner);
+        JTextField clarityComment = new JTextField();
+        rubricPanel.add(clarityComment);
+        
+        // Methodology
+        rubricPanel.add(new JLabel("Methodology"));
+        JSpinner methodSpinner = new JSpinner(new SpinnerNumberModel(8, 1, 10, 1));
+        rubricPanel.add(methodSpinner);
+        JTextField methodComment = new JTextField();
+        rubricPanel.add(methodComment);
+        
+        // Results
+        rubricPanel.add(new JLabel("Results"));
+        JSpinner resultsSpinner = new JSpinner(new SpinnerNumberModel(7, 1, 10, 1));
+        rubricPanel.add(resultsSpinner);
+        JTextField resultsComment = new JTextField();
+        rubricPanel.add(resultsComment);
+        
+        // Presentation
+        rubricPanel.add(new JLabel("Presentation Quality"));
+        JSpinner presSpinner = new JSpinner(new SpinnerNumberModel(9, 1, 10, 1));
+        rubricPanel.add(presSpinner);
+        JTextField presComment = new JTextField();
+        rubricPanel.add(presComment);
+        
+        // Overall comments
+        JPanel overallPanel = new JPanel(new BorderLayout(10, 10));
+        overallPanel.setBorder(new TitledBorder("Overall Comments"));
+        overallPanel.setBackground(new Color(248, 249, 250));
+        
+        JTextArea overallComment = new JTextArea(4, 50);
+        overallComment.setLineWrap(true);
+        overallComment.setWrapStyleWord(true);
+        JScrollPane commentScroll = new JScrollPane(overallComment);
+        overallPanel.add(commentScroll, BorderLayout.CENTER);
+        
+        // Calculate total
+        JPanel totalPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        totalPanel.setBackground(new Color(248, 249, 250));
+        totalPanel.add(new JLabel("Total Score: "));
+        JLabel totalLabel = new JLabel("31/40 (7.75/10)");
+        totalLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        totalLabel.setForeground(new Color(46, 204, 113));
+        totalPanel.add(totalLabel);
+        
+        // Submit button
+        JButton submitBtn = createActionButton("Submit Evaluation", new Color(46, 204, 113));
+        submitBtn.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        buttonPanel.setOpaque(false);
+        buttonPanel.add(submitBtn);
+        
+        // Assemble form
+        formPanel.add(infoPanel, BorderLayout.NORTH);
+        formPanel.add(rubricPanel, BorderLayout.CENTER);
+        formPanel.add(overallPanel, BorderLayout.SOUTH);
+        
+        panel.add(title, BorderLayout.NORTH);
+        panel.add(formPanel, BorderLayout.CENTER);
+        panel.add(totalPanel, BorderLayout.SOUTH);
+        panel.add(buttonPanel, BorderLayout.SOUTH);
+        
+        return panel;
     }
     
     private JPanel createHeaderPanel() {
@@ -61,18 +178,59 @@ public class EvaluatorPanel extends JPanel {
         leftPanel.add(title);
         leftPanel.add(subtitle);
         
-        // Right side: Logout button
-        JButton logoutBtn = new JButton("Logout");
-        logoutBtn.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        // Right side: Logout button (MATCHING COORDINATOR STYLE)
+        JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        rightPanel.setOpaque(false);
+        
+        JButton logoutBtn = new JButton("LOGOUT");
+        logoutBtn.setFont(new Font("Segoe UI", Font.BOLD, 14));
         logoutBtn.setBackground(new Color(231, 76, 60));
         logoutBtn.setForeground(Color.WHITE);
         logoutBtn.setFocusPainted(false);
-        logoutBtn.setBorder(new RoundedBorder(10));
+        logoutBtn.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(192, 57, 43), 2),
+            BorderFactory.createEmptyBorder(10, 25, 10, 25)
+        ));
         logoutBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        logoutBtn.addActionListener(e -> mainFrame.switchScreen("LOGIN"));
+        logoutBtn.setPreferredSize(new Dimension(120, 45));
         
+        // Add hover effects
+        logoutBtn.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseEntered(java.awt.event.MouseEvent evt) {
+                logoutBtn.setBackground(new Color(192, 57, 43));
+                logoutBtn.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(new Color(169, 50, 38), 2),
+                    BorderFactory.createEmptyBorder(10, 25, 10, 25)
+                ));
+            }
+            
+            public void mouseExited(java.awt.event.MouseEvent evt) {
+                logoutBtn.setBackground(new Color(231, 76, 60));
+                logoutBtn.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(new Color(192, 57, 43), 2),
+                    BorderFactory.createEmptyBorder(10, 25, 10, 25)
+                ));
+            }
+        });
+        
+        // Logout action with confirmation
+        logoutBtn.addActionListener(e -> {
+            int confirm = JOptionPane.showConfirmDialog(
+                EvaluatorPanel.this,
+                "Are you sure you want to logout?",
+                "Confirm Logout",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.QUESTION_MESSAGE
+            );
+            
+            if (confirm == JOptionPane.YES_OPTION) {
+                mainFrame.switchScreen("LOGIN");
+            }
+        });
+        
+        rightPanel.add(logoutBtn);
         headerPanel.add(leftPanel, BorderLayout.WEST);
-        headerPanel.add(logoutBtn, BorderLayout.EAST);
+        headerPanel.add(rightPanel, BorderLayout.EAST);
         
         return headerPanel;
     }
@@ -216,7 +374,7 @@ public class EvaluatorPanel extends JPanel {
         
         // Completed Evaluations Table
         String[] columnNames = {"ID", "Student", "Title", "Type", "Score", "Date Completed", "View"};
-        evaluationsTableModel = new DefaultTableModel(columnNames, 0);
+        completedTableModel = new DefaultTableModel(columnNames, 0);
         
         // Add sample data
         Object[][] sampleData = {
@@ -228,17 +386,17 @@ public class EvaluatorPanel extends JPanel {
         };
         
         for (Object[] row : sampleData) {
-            evaluationsTableModel.addRow(row);
+            completedTableModel.addRow(row);
         }
         
-        evaluationsTable = new JTable(evaluationsTableModel);
-        evaluationsTable.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        evaluationsTable.setRowHeight(35);
-        evaluationsTable.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 12));
-        evaluationsTable.getTableHeader().setBackground(new Color(22, 160, 133));
-        evaluationsTable.getTableHeader().setForeground(Color.WHITE);
+        completedTable = new JTable(completedTableModel);
+        completedTable.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        completedTable.setRowHeight(35);
+        completedTable.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 12));
+        completedTable.getTableHeader().setBackground(new Color(22, 160, 133));
+        completedTable.getTableHeader().setForeground(Color.WHITE);
         
-        JScrollPane scrollPane = new JScrollPane(evaluationsTable);
+        JScrollPane scrollPane = new JScrollPane(completedTable);
         scrollPane.setBorder(new LineBorder(new Color(220, 220, 220), 1));
         
         panel.add(title, BorderLayout.NORTH);
@@ -363,6 +521,17 @@ public class EvaluatorPanel extends JPanel {
         
         footer.add(footerText, BorderLayout.CENTER);
         return footer;
+    }
+    
+    private JButton createActionButton(String text, Color color) {
+        JButton button = new JButton(text);
+        button.setBackground(color);
+        button.setForeground(Color.WHITE);
+        button.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        button.setFocusPainted(false);
+        button.setBorder(new RoundedBorder(5));
+        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        return button;
     }
     
     // Rounded Border class

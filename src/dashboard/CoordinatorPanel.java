@@ -7,15 +7,15 @@ import javax.swing.table.*;
 
 public class CoordinatorPanel extends JPanel {
     private MainFrame mainFrame;
-    private JTable sessionsTable, submissionsTable;
-    private DefaultTableModel sessionsTableModel, submissionsTableModel;
+    private JTable sessionsTable, submissionsTable, awardsTable;
+    private DefaultTableModel sessionsTableModel, submissionsTableModel, awardsTableModel;
     
     public CoordinatorPanel(MainFrame mainFrame) {
         this.mainFrame = mainFrame;
         setLayout(new BorderLayout(10, 10));
         setBackground(new Color(240, 245, 250));
         
-        // Header Panel
+        // Header Panel with LOGOUT BUTTON
         JPanel headerPanel = createHeaderPanel();
         add(headerPanel, BorderLayout.NORTH);
         
@@ -34,6 +34,9 @@ public class CoordinatorPanel extends JPanel {
         
         // Tab 4: Schedule
         tabbedPane.addTab("Schedule", createSchedulePanel());
+        
+        // Tab 5: Awards & Evaluations
+        tabbedPane.addTab("Awards", createAwardsPanel());
         
         add(tabbedPane, BorderLayout.CENTER);
         
@@ -61,18 +64,59 @@ public class CoordinatorPanel extends JPanel {
         leftPanel.add(title);
         leftPanel.add(subtitle);
         
-        // Right side: Logout button
-        JButton logoutBtn = new JButton("Logout");
-        logoutBtn.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        // RIGHT SIDE: LOGOUT BUTTON (FIXED AND PROMINENT)
+        JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        rightPanel.setOpaque(false);
+        
+        JButton logoutBtn = new JButton("LOGOUT");
+        logoutBtn.setFont(new Font("Segoe UI", Font.BOLD, 14));
         logoutBtn.setBackground(new Color(231, 76, 60));
         logoutBtn.setForeground(Color.WHITE);
         logoutBtn.setFocusPainted(false);
-        logoutBtn.setBorder(new RoundedBorder(10));
+        logoutBtn.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(192, 57, 43), 2),
+            BorderFactory.createEmptyBorder(10, 25, 10, 25)
+        ));
         logoutBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        logoutBtn.addActionListener(e -> mainFrame.switchScreen("LOGIN"));
+        logoutBtn.setPreferredSize(new Dimension(120, 45));
         
+        // Add hover effects
+        logoutBtn.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseEntered(java.awt.event.MouseEvent evt) {
+                logoutBtn.setBackground(new Color(192, 57, 43));
+                logoutBtn.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(new Color(169, 50, 38), 2),
+                    BorderFactory.createEmptyBorder(10, 25, 10, 25)
+                ));
+            }
+            
+            public void mouseExited(java.awt.event.MouseEvent evt) {
+                logoutBtn.setBackground(new Color(231, 76, 60));
+                logoutBtn.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(new Color(192, 57, 43), 2),
+                    BorderFactory.createEmptyBorder(10, 25, 10, 25)
+                ));
+            }
+        });
+        
+        // Logout action with confirmation
+        logoutBtn.addActionListener(e -> {
+            int confirm = JOptionPane.showConfirmDialog(
+                CoordinatorPanel.this,
+                "Are you sure you want to logout?",
+                "Confirm Logout",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.QUESTION_MESSAGE
+            );
+            
+            if (confirm == JOptionPane.YES_OPTION) {
+                mainFrame.switchScreen("LOGIN");
+            }
+        });
+        
+        rightPanel.add(logoutBtn);
         headerPanel.add(leftPanel, BorderLayout.WEST);
-        headerPanel.add(logoutBtn, BorderLayout.EAST);
+        headerPanel.add(rightPanel, BorderLayout.EAST);
         
         return headerPanel;
     }
@@ -287,6 +331,82 @@ public class CoordinatorPanel extends JPanel {
         panel.add(southPanel, BorderLayout.SOUTH);
         
         return panel;
+    }
+    
+    private JPanel createAwardsPanel() {
+        JPanel panel = new JPanel(new BorderLayout(15, 15));
+        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        panel.setBackground(Color.WHITE);
+        
+        JLabel title = new JLabel("Award Nomination & Evaluation Results");
+        title.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        title.setForeground(new Color(52, 73, 94));
+        
+        // Awards Cards
+        JPanel awardsPanel = new JPanel(new GridLayout(1, 3, 15, 15));
+        awardsPanel.setBackground(Color.WHITE);
+        
+        awardsPanel.add(createAwardCard("🏆 Best Oral", "Highest scoring oral presentation", 
+            new Color(255, 193, 7), "John Doe - AI in Healthcare (9.2/10)"));
+        awardsPanel.add(createAwardCard("📊 Best Poster", "Highest scoring poster presentation", 
+            new Color(33, 150, 243), "Jane Smith - Quantum Computing (9.5/10)"));
+        awardsPanel.add(createAwardCard("👥 People's Choice", "Voted by attendees", 
+            new Color(156, 39, 176), "Open for Voting"));
+        
+        panel.add(title, BorderLayout.NORTH);
+        panel.add(awardsPanel, BorderLayout.CENTER);
+        
+        // Finalize Button
+        JButton finalizeBtn = new JButton("Finalize Award Winners");
+        finalizeBtn.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        finalizeBtn.setBackground(new Color(46, 204, 113));
+        finalizeBtn.setForeground(Color.WHITE);
+        finalizeBtn.setBorder(new RoundedBorder(8));
+        
+        JPanel southPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        southPanel.setOpaque(false);
+        southPanel.add(finalizeBtn);
+        
+        panel.add(southPanel, BorderLayout.SOUTH);
+        
+        return panel;
+    }
+    
+    private JPanel createAwardCard(String awardName, String description, Color color, String winner) {
+        JPanel card = new JPanel(new BorderLayout(10, 10));
+        card.setBackground(Color.WHITE);
+        card.setBorder(new CompoundBorder(
+            new LineBorder(color, 2),
+            BorderFactory.createEmptyBorder(15, 15, 15, 15)
+        ));
+        
+        JLabel nameLabel = new JLabel(awardName);
+        nameLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        nameLabel.setForeground(color);
+        
+        JTextArea descArea = new JTextArea(description);
+        descArea.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        descArea.setForeground(new Color(100, 100, 100));
+        descArea.setEditable(false);
+        descArea.setLineWrap(true);
+        descArea.setWrapStyleWord(true);
+        descArea.setOpaque(false);
+        
+        JLabel winnerLabel = new JLabel("Leading: " + winner);
+        winnerLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        winnerLabel.setForeground(new Color(60, 60, 60));
+        
+        JButton nominateBtn = new JButton("Nominate");
+        nominateBtn.setBackground(color);
+        nominateBtn.setForeground(Color.WHITE);
+        nominateBtn.setBorder(new RoundedBorder(5));
+        
+        card.add(nameLabel, BorderLayout.NORTH);
+        card.add(descArea, BorderLayout.CENTER);
+        card.add(winnerLabel, BorderLayout.SOUTH);
+        card.add(nominateBtn, BorderLayout.SOUTH);
+        
+        return card;
     }
     
     private JPanel createCoordStatCard(String title, String value, Color color) {

@@ -7,7 +7,7 @@ import javax.swing.table.*;
 
 public class AdminPanel extends JPanel {
     private MainFrame mainFrame;
-    private JTable userTable, statsTable;
+    private JTable userTable;
     private DefaultTableModel userTableModel;
     
     public AdminPanel(MainFrame mainFrame) {
@@ -23,22 +23,205 @@ public class AdminPanel extends JPanel {
         JTabbedPane tabbedPane = new JTabbedPane();
         tabbedPane.setFont(new Font("Segoe UI", Font.BOLD, 14));
         
-        // Tab 1: Dashboard
-        tabbedPane.addTab("Dashboard", createDashboardPanel());
-        
-        // Tab 2: User Management
+        // Tab 1: User Management
         tabbedPane.addTab("User Management", createUserManagementPanel());
         
-        // Tab 3: System Settings
-        tabbedPane.addTab("System Settings", createSettingsPanel());
+        // Tab 2: System Configuration
+        tabbedPane.addTab("System Configuration", createSystemConfigPanel());
         
-        // Tab 4: Reports
-        tabbedPane.addTab("Reports", createReportsPanel());
+        // Tab 3: Role Management
+        tabbedPane.addTab("Role Management", createRoleManagementPanel());
+        
+        // Tab 4: Reports & Analytics
+        tabbedPane.addTab("Reports & Analytics", createReportsPanel());
         
         add(tabbedPane, BorderLayout.CENTER);
         
         // Footer
         add(createFooterPanel(), BorderLayout.SOUTH);
+    }
+    
+    private JPanel createUserManagementPanel() {
+        JPanel panel = new JPanel(new BorderLayout(15, 15));
+        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        panel.setBackground(Color.WHITE);
+        
+        // Header
+        JPanel headerPanel = new JPanel(new BorderLayout());
+        headerPanel.setOpaque(false);
+        
+        JLabel title = new JLabel("User Management");
+        title.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        title.setForeground(new Color(52, 73, 94));
+        
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+        buttonPanel.setOpaque(false);
+        
+        JButton addUserBtn = createActionButton("Add New User", new Color(46, 204, 113));
+        JButton editUserBtn = createActionButton("Edit User", new Color(52, 152, 219));
+        JButton resetPassBtn = createActionButton("Reset Password", new Color(155, 89, 182));
+        JButton deleteUserBtn = createActionButton("Delete User", new Color(231, 76, 60));
+        
+        buttonPanel.add(addUserBtn);
+        buttonPanel.add(editUserBtn);
+        buttonPanel.add(resetPassBtn);
+        buttonPanel.add(deleteUserBtn);
+        
+        headerPanel.add(title, BorderLayout.WEST);
+        headerPanel.add(buttonPanel, BorderLayout.EAST);
+        
+        panel.add(headerPanel, BorderLayout.NORTH);
+        
+        // User Table with Role Selector
+        String[] columnNames = {"ID", "Username", "Role", "Email", "Status", "Created", "Actions"};
+        userTableModel = new DefaultTableModel(columnNames, 0);
+        
+        // Add sample data
+        Object[][] sampleData = {
+            {1, "student1", "Student", "student1@uni.edu", "Active", "2024-01-15", "Edit"},
+            {2, "coordinator1", "Coordinator", "coord@uni.edu", "Active", "2024-01-20", "Edit"},
+            {3, "evaluator1", "Evaluator", "eval@uni.edu", "Active", "2024-02-10", "Edit"},
+            {4, "evaluator2", "Evaluator", "eval2@uni.edu", "Active", "2024-02-15", "Edit"},
+            {5, "admin", "Administrator", "admin@uni.edu", "Active", "2024-01-01", "Edit"}
+        };
+        
+        for (Object[] row : sampleData) {
+            userTableModel.addRow(row);
+        }
+        
+        userTable = new JTable(userTableModel);
+        userTable.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        userTable.setRowHeight(35);
+        userTable.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 12));
+        userTable.getTableHeader().setBackground(new Color(52, 73, 94));
+        userTable.getTableHeader().setForeground(Color.WHITE);
+        
+        JScrollPane scrollPane = new JScrollPane(userTable);
+        scrollPane.setBorder(new LineBorder(new Color(220, 220, 220), 1));
+        
+        panel.add(scrollPane, BorderLayout.CENTER);
+        
+        return panel;
+    }
+    
+    private JPanel createSystemConfigPanel() {
+        JPanel panel = new JPanel(new BorderLayout(15, 15));
+        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        panel.setBackground(Color.WHITE);
+        
+        JLabel title = new JLabel("System Configuration");
+        title.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        title.setForeground(new Color(52, 73, 94));
+        
+        JPanel settingsCard = new JPanel(new GridLayout(6, 2, 15, 15));
+        settingsCard.setBorder(new CompoundBorder(
+            new LineBorder(new Color(220, 220, 220), 1),
+            BorderFactory.createEmptyBorder(20, 20, 20, 20)
+        ));
+        settingsCard.setBackground(new Color(250, 250, 252));
+        
+        // System Settings
+        settingsCard.add(createSettingLabel("Seminar Title:"));
+        settingsCard.add(createSettingField("Annual Research Symposium 2024"));
+        
+        settingsCard.add(createSettingLabel("Submission Deadline:"));
+        settingsCard.add(createSettingField("2024-04-30"));
+        
+        settingsCard.add(createSettingLabel("Max File Size (MB):"));
+        settingsCard.add(createSettingField("50"));
+        
+        settingsCard.add(createSettingLabel("Allowed File Types:"));
+        settingsCard.add(createSettingField("PDF, PPT, PPTX, DOC, DOCX"));
+        
+        settingsCard.add(createSettingLabel("Evaluation Deadline:"));
+        settingsCard.add(createSettingField("2024-05-10"));
+        
+        settingsCard.add(createSettingLabel("System Mode:"));
+        JComboBox<String> modeCombo = new JComboBox<>(new String[]{"Active", "Maintenance", "Closed"});
+        modeCombo.setSelectedItem("Active");
+        settingsCard.add(modeCombo);
+        
+        JButton saveBtn = createActionButton("Save Configuration", new Color(46, 204, 113));
+        saveBtn.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        
+        JPanel southPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        southPanel.setOpaque(false);
+        southPanel.add(saveBtn);
+        
+        panel.add(title, BorderLayout.NORTH);
+        panel.add(settingsCard, BorderLayout.CENTER);
+        panel.add(southPanel, BorderLayout.SOUTH);
+        
+        return panel;
+    }
+    
+    private JPanel createRoleManagementPanel() {
+        JPanel panel = new JPanel(new BorderLayout(15, 15));
+        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        panel.setBackground(Color.WHITE);
+        
+        JLabel title = new JLabel("Role Permissions Management");
+        title.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        title.setForeground(new Color(52, 73, 94));
+        
+        JPanel rolesPanel = new JPanel(new GridLayout(1, 4, 15, 15));
+        rolesPanel.setBackground(Color.WHITE);
+        
+        rolesPanel.add(createRoleCard("Student", "Submit presentations\nView own submissions\nUpload files", 
+            new Color(52, 152, 219), "👨‍🎓"));
+        rolesPanel.add(createRoleCard("Evaluator", "Review assigned presentations\nScore using rubrics\nProvide feedback", 
+            new Color(22, 160, 133), "👨‍🏫"));
+        rolesPanel.add(createRoleCard("Coordinator", "Manage sessions\nAssign evaluators\nGenerate reports\nOversee awards", 
+            new Color(41, 128, 185), "👨‍💼"));
+        rolesPanel.add(createRoleCard("Admin", "User management\nSystem configuration\nRole assignment\nAll permissions", 
+            new Color(52, 73, 94), "👨‍💻"));
+        
+        panel.add(title, BorderLayout.NORTH);
+        panel.add(rolesPanel, BorderLayout.CENTER);
+        
+        return panel;
+    }
+    
+    private JPanel createRoleCard(String role, String permissions, Color color, String icon) {
+        JPanel card = new JPanel(new BorderLayout(10, 10));
+        card.setBackground(Color.WHITE);
+        card.setBorder(new CompoundBorder(
+            new LineBorder(color, 2),
+            BorderFactory.createEmptyBorder(15, 15, 15, 15)
+        ));
+        
+        JPanel topPanel = new JPanel(new BorderLayout());
+        topPanel.setOpaque(false);
+        
+        JLabel iconLabel = new JLabel(icon);
+        iconLabel.setFont(new Font("Segoe UI", Font.PLAIN, 28));
+        
+        JLabel roleLabel = new JLabel(role);
+        roleLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        roleLabel.setForeground(color);
+        
+        topPanel.add(iconLabel, BorderLayout.WEST);
+        topPanel.add(roleLabel, BorderLayout.CENTER);
+        
+        JTextArea permArea = new JTextArea(permissions);
+        permArea.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        permArea.setForeground(new Color(100, 100, 100));
+        permArea.setEditable(false);
+        permArea.setLineWrap(true);
+        permArea.setWrapStyleWord(true);
+        permArea.setOpaque(false);
+        
+        JButton editBtn = new JButton("Edit Permissions");
+        editBtn.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        editBtn.setBackground(color);
+        editBtn.setForeground(Color.WHITE);
+        editBtn.setBorder(new RoundedBorder(4));
+        
+        card.add(topPanel, BorderLayout.NORTH);
+        card.add(permArea, BorderLayout.CENTER);
+        card.add(editBtn, BorderLayout.SOUTH);
+        
+        return card;
     }
     
     private JPanel createHeaderPanel() {
@@ -61,18 +244,59 @@ public class AdminPanel extends JPanel {
         leftPanel.add(title);
         leftPanel.add(subtitle);
         
-        // Right side: Logout button
-        JButton logoutBtn = new JButton("Logout");
-        logoutBtn.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        // Right side: Logout button (MATCHING COORDINATOR STYLE)
+        JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        rightPanel.setOpaque(false);
+        
+        JButton logoutBtn = new JButton("LOGOUT");
+        logoutBtn.setFont(new Font("Segoe UI", Font.BOLD, 14));
         logoutBtn.setBackground(new Color(231, 76, 60));
         logoutBtn.setForeground(Color.WHITE);
         logoutBtn.setFocusPainted(false);
-        logoutBtn.setBorder(new RoundedBorder(10));
+        logoutBtn.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(192, 57, 43), 2),
+            BorderFactory.createEmptyBorder(10, 25, 10, 25)
+        ));
         logoutBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        logoutBtn.addActionListener(e -> mainFrame.switchScreen("LOGIN"));
+        logoutBtn.setPreferredSize(new Dimension(120, 45));
         
+        // Add hover effects
+        logoutBtn.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseEntered(java.awt.event.MouseEvent evt) {
+                logoutBtn.setBackground(new Color(192, 57, 43));
+                logoutBtn.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(new Color(169, 50, 38), 2),
+                    BorderFactory.createEmptyBorder(10, 25, 10, 25)
+                ));
+            }
+            
+            public void mouseExited(java.awt.event.MouseEvent evt) {
+                logoutBtn.setBackground(new Color(231, 76, 60));
+                logoutBtn.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(new Color(192, 57, 43), 2),
+                    BorderFactory.createEmptyBorder(10, 25, 10, 25)
+                ));
+            }
+        });
+        
+        // Logout action with confirmation
+        logoutBtn.addActionListener(e -> {
+            int confirm = JOptionPane.showConfirmDialog(
+                AdminPanel.this,
+                "Are you sure you want to logout?",
+                "Confirm Logout",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.QUESTION_MESSAGE
+            );
+            
+            if (confirm == JOptionPane.YES_OPTION) {
+                mainFrame.switchScreen("LOGIN");
+            }
+        });
+        
+        rightPanel.add(logoutBtn);
         headerPanel.add(leftPanel, BorderLayout.WEST);
-        headerPanel.add(logoutBtn, BorderLayout.EAST);
+        headerPanel.add(rightPanel, BorderLayout.EAST);
         
         return headerPanel;
     }
@@ -120,72 +344,6 @@ public class AdminPanel extends JPanel {
         statsPanel.add(createStatCard("System Health", "100%", new Color(22, 160, 133), "💻"));
         
         panel.add(statsPanel, BorderLayout.CENTER);
-        
-        return panel;
-    }
-    
-    private JPanel createUserManagementPanel() {
-        JPanel panel = new JPanel(new BorderLayout(15, 15));
-        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
-        panel.setBackground(Color.WHITE);
-        
-        // Header
-        JPanel headerPanel = new JPanel(new BorderLayout());
-        headerPanel.setOpaque(false);
-        
-        JLabel title = new JLabel("User Management");
-        title.setFont(new Font("Segoe UI", Font.BOLD, 18));
-        title.setForeground(new Color(52, 73, 94));
-        
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
-        buttonPanel.setOpaque(false);
-        
-        JButton addUserBtn = createActionButton("Add User", new Color(46, 204, 113));
-        JButton editUserBtn = createActionButton("Edit User", new Color(52, 152, 219));
-        JButton deleteUserBtn = createActionButton("Delete User", new Color(231, 76, 60));
-        
-        buttonPanel.add(addUserBtn);
-        buttonPanel.add(editUserBtn);
-        buttonPanel.add(deleteUserBtn);
-        
-        headerPanel.add(title, BorderLayout.WEST);
-        headerPanel.add(buttonPanel, BorderLayout.EAST);
-        
-        panel.add(headerPanel, BorderLayout.NORTH);
-        
-        // User Table
-        String[] columnNames = {"ID", "Username", "Role", "Email", "Status", "Created Date", "Actions"};
-        userTableModel = new DefaultTableModel(columnNames, 0) {
-            @Override
-            public boolean isCellEditable(int row, int column) {
-                return column == 6; // Only Actions column is editable
-            }
-        };
-        
-        // Add sample data
-        Object[][] sampleData = {
-            {1, "admin", "Administrator", "admin@university.edu", "Active", "2024-01-15", "Edit"},
-            {2, "coordinator1", "Coordinator", "coord@university.edu", "Active", "2024-01-20", "Edit"},
-            {3, "evaluator1", "Evaluator", "eval@university.edu", "Active", "2024-02-10", "Edit"},
-            {4, "student1", "Student", "student1@university.edu", "Active", "2024-02-15", "Edit"},
-            {5, "student2", "Student", "student2@university.edu", "Inactive", "2024-02-20", "Edit"}
-        };
-        
-        for (Object[] row : sampleData) {
-            userTableModel.addRow(row);
-        }
-        
-        userTable = new JTable(userTableModel);
-        userTable.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        userTable.setRowHeight(35);
-        userTable.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 12));
-        userTable.getTableHeader().setBackground(new Color(52, 73, 94));
-        userTable.getTableHeader().setForeground(Color.WHITE);
-        
-        JScrollPane scrollPane = new JScrollPane(userTable);
-        scrollPane.setBorder(new LineBorder(new Color(220, 220, 220), 1));
-        
-        panel.add(scrollPane, BorderLayout.CENTER);
         
         return panel;
     }

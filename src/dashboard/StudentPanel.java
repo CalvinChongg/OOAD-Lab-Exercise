@@ -62,18 +62,59 @@ public class StudentPanel extends JPanel {
         leftPanel.add(title);
         leftPanel.add(subtitle);
         
-        // Right side: Logout button
-        logoutBtn = new JButton("Logout");
-        logoutBtn.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        // Right side: Logout button (MATCHING COORDINATOR STYLE)
+        JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        rightPanel.setOpaque(false);
+        
+        logoutBtn = new JButton("LOGOUT");
+        logoutBtn.setFont(new Font("Segoe UI", Font.BOLD, 14));
         logoutBtn.setBackground(new Color(231, 76, 60));
         logoutBtn.setForeground(Color.WHITE);
         logoutBtn.setFocusPainted(false);
-        logoutBtn.setBorder(new RoundedBorder(10));
+        logoutBtn.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(192, 57, 43), 2),
+            BorderFactory.createEmptyBorder(10, 25, 10, 25)
+        ));
         logoutBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        logoutBtn.addActionListener(e -> mainFrame.switchScreen("LOGIN"));
+        logoutBtn.setPreferredSize(new Dimension(120, 45));
         
+        // Add hover effects
+        logoutBtn.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseEntered(java.awt.event.MouseEvent evt) {
+                logoutBtn.setBackground(new Color(192, 57, 43));
+                logoutBtn.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(new Color(169, 50, 38), 2),
+                    BorderFactory.createEmptyBorder(10, 25, 10, 25)
+                ));
+            }
+            
+            public void mouseExited(java.awt.event.MouseEvent evt) {
+                logoutBtn.setBackground(new Color(231, 76, 60));
+                logoutBtn.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(new Color(192, 57, 43), 2),
+                    BorderFactory.createEmptyBorder(10, 25, 10, 25)
+                ));
+            }
+        });
+        
+        // Logout action with confirmation
+        logoutBtn.addActionListener(e -> {
+            int confirm = JOptionPane.showConfirmDialog(
+                StudentPanel.this,
+                "Are you sure you want to logout?",
+                "Confirm Logout",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.QUESTION_MESSAGE
+            );
+            
+            if (confirm == JOptionPane.YES_OPTION) {
+                mainFrame.switchScreen("LOGIN");
+            }
+        });
+        
+        rightPanel.add(logoutBtn);
         headerPanel.add(leftPanel, BorderLayout.WEST);
-        headerPanel.add(logoutBtn, BorderLayout.EAST);
+        headerPanel.add(rightPanel, BorderLayout.EAST);
         
         return headerPanel;
     }
