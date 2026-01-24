@@ -26,7 +26,6 @@ public class MainFrame extends JFrame {
         mainContainer.add(new StudentPanel(this), "STUDENT");
         mainContainer.add(new CoordinatorPanel(this), "COORDINATOR");
         mainContainer.add(new EvaluatorPanel(this), "EVALUATOR");
-        mainContainer.add(new AdminPanel(this), "ADMIN");
 
         add(mainContainer);
         
