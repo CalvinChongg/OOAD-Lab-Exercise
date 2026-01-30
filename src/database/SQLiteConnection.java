@@ -123,7 +123,10 @@ public class SQLiteConnection {
         String seedUsers = """
             INSERT OR IGNORE INTO users (username, password, roles) VALUES
             ('ali', '123', 'STUDENT'),
+<<<<<<< HEAD
             ('admin', 'admin123', 'ADMIN'),
+=======
+>>>>>>> register
             ('coordinator', 'coordinator123', 'COORDINATOR'),
             ('evaluator', 'evaluator123', 'EVALUATOR');
             """;
