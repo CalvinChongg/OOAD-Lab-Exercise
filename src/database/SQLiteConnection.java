@@ -19,7 +19,7 @@ public class SQLiteConnection {
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 username TEXT NOT NULL UNIQUE,
                 password TEXT NOT NULL,
-                role TEXT NOT NULL
+                roles TEXT NOT NULL
             );
             """;
 
@@ -116,7 +116,7 @@ public class SQLiteConnection {
             INSERT OR IGNORE INTO users (username, password, roles) VALUES
             ('ali', '123', 'STUDENT'),
             ('coordinator', 'coordinator123', 'COORDINATOR'),
-            ('evaluator', 'evaluator123', 'EVALUATOR'),
+            ('evaluator', 'evaluator123', 'EVALUATOR');
         """;
 
         String seedPosterBoards = """
@@ -146,6 +146,7 @@ public class SQLiteConnection {
             System.out.println("Database initialized with all required tables");
         } catch (SQLException e) {
             e.printStackTrace();
+            //System.out.println("test");
         }
     }
 }
