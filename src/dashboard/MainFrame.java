@@ -13,13 +13,8 @@ public class MainFrame extends JFrame {
 
     // No arguments in constructor
     public MainFrame() {
-<<<<<<< HEAD
-        setTitle("Seminar System (Prototype)");
-        setSize(800, 600);
-=======
         setTitle("Seminar Management System");
         setSize(1000, 800);
->>>>>>> ff01260c6e3ff9aa335d433518d5d24f13441535
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
 
