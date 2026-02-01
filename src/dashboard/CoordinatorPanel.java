@@ -1,5 +1,6 @@
 package dashboard;
 
+import dao.SubmissionDAO;
 import java.awt.*;
 import javax.swing.*;
 import javax.swing.border.*;
@@ -265,15 +266,19 @@ public class CoordinatorPanel extends JPanel {
         submissionsTableModel = new DefaultTableModel(columnNames, 0);
         
         // Add sample data
-        Object[][] sampleSubmissions = {
-            {1, "John Doe", "AI in Healthcare", "Oral", "Dr. Smith", "Pending", "", "Review"},
-            {2, "Jane Smith", "Quantum Computing", "Poster", "Dr. Johnson", "Pending", "", "Review"},
-            {3, "Bob Wilson", "Renewable Energy", "Oral", "Dr. Brown", "Approved", "8.5/10", "View"},
-            {4, "Alice Brown", "Climate Change", "Poster", "Dr. Davis", "Rejected", "4/10", "View"},
-            {5, "Charlie Lee", "Space Exploration", "Oral", "Dr. Wilson", "Pending", "", "Review"}
-        };
+        // Object[][] sampleSubmissions = {
+        //     {1, "John Doe", "AI in Healthcare", "Oral", "Dr. Smith", "Pending", "", "Review"},
+        //     {2, "Jane Smith", "Quantum Computing", "Poster", "Dr. Johnson", "Pending", "", "Review"},
+        //     {3, "Bob Wilson", "Renewable Energy", "Oral", "Dr. Brown", "Approved", "8.5/10", "View"},
+        //     {4, "Alice Brown", "Climate Change", "Poster", "Dr. Davis", "Rejected", "4/10", "View"},
+        //     {5, "Charlie Lee", "Space Exploration", "Oral", "Dr. Wilson", "Pending", "", "Review"}
+        // };
+
+        SubmissionDAO dao = new SubmissionDAO();
+        var allSubmissions = dao.getAllSubmissions();
+        submissionsTableModel.setRowCount(0);
         
-        for (Object[] row : sampleSubmissions) {
+        for (Object[] row : allSubmissions) {
             submissionsTableModel.addRow(row);
         }
         

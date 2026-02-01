@@ -61,4 +61,33 @@ public class SubmissionDAO {
         
         return submissions;
     }
+
+    public List<Object[]> getAllSubmissions() {
+        List<Object[]> submissions = new ArrayList<>();
+        // Using a JOIN to get the student's name from the users table
+        String sql = """
+            SELECT s.id, u.username, s.research_title, s.presentation_type, s.status 
+            FROM submissions s 
+            JOIN users u ON s.student_id = u.id
+            """;
+        
+        try (Connection conn = SQLiteConnection.connect();
+            Statement stmt = conn.createStatement();
+            ResultSet rs = stmt.executeQuery(sql)) {
+            
+            while (rs.next()) {
+                submissions.add(new Object[]{
+                    rs.getInt("id"),
+                    rs.getString("username"),
+                    rs.getString("research_title"),
+                    rs.getString("presentation_type"),
+                    rs.getString("status"),
+                    "Review" // Button label
+                });
+            }
+        } catch (SQLException e) {
+            System.err.println("Error fetching all submissions: " + e.getMessage());
+        }
+        return submissions;
+    }
 }
