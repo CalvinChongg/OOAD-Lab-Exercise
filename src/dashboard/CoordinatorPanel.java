@@ -14,7 +14,7 @@ public class CoordinatorPanel extends JPanel {
     private JTable sessionsTable, submissionsTable, awardsTable;
     private DefaultTableModel sessionsTableModel, submissionsTableModel, awardsTableModel;
 
-    private JButton createSessionBtn, editSessionBtn, assignBtn;
+    private JButton createSessionBtn, editSessionBtn, deleteSessionBtn;
 
     public CoordinatorPanel(MainFrame mainFrame) {
         this.mainFrame = mainFrame;
@@ -170,11 +170,10 @@ public class CoordinatorPanel extends JPanel {
         // INITIALIZE THE BUTTONS
         createSessionBtn = createActionButton("Create Session", new Color(46, 204, 113));
         editSessionBtn = createActionButton("Edit Session", new Color(52, 152, 219));
-        assignBtn = createActionButton("Assign Presentations", new Color(155, 89, 182));
-        
+        deleteSessionBtn = createActionButton("Delete Session", new Color(231, 76, 60)); 
         buttonPanel.add(createSessionBtn);
         buttonPanel.add(editSessionBtn);
-        buttonPanel.add(assignBtn);
+        buttonPanel.add(deleteSessionBtn);
         
         headerPanel.add(title, BorderLayout.WEST);
         headerPanel.add(buttonPanel, BorderLayout.EAST);
@@ -212,22 +211,77 @@ public class CoordinatorPanel extends JPanel {
             }
         });
 
-        // ASSIGN PRESENTATIONS ACTION (Jump to Tab 2)
-        assignBtn.addActionListener(e -> {
-            // Find the JTabbedPane and switch to "Submission Review"
-            Container parent = getParent();
-            while (parent != null && !(parent instanceof JTabbedPane)) {
-                parent = parent.getParent();
+        editSessionBtn.addActionListener(e -> {
+            int selectedRow = sessionsTable.getSelectedRow();
+            if (selectedRow == -1) {
+                JOptionPane.showMessageDialog(this, "Please select a session from the table first!");
+                return;
             }
-            if (parent instanceof JTabbedPane) {
-                ((JTabbedPane) parent).setSelectedIndex(2);
-                JOptionPane.showMessageDialog(this, "Select a submission and click 'Review' to assign an evaluator.");
+
+            // Extract ID from the "SES-001" format
+            String idStr = (String) sessionsTableModel.getValueAt(selectedRow, 0);
+            int sessionId = Integer.parseInt(idStr.replace("SES-", ""));
+
+            JTextField nameField = new JTextField((String) sessionsTableModel.getValueAt(selectedRow, 1));
+            JTextField dateField = new JTextField((String) sessionsTableModel.getValueAt(selectedRow, 2));
+            JTextField timeField = new JTextField((String) sessionsTableModel.getValueAt(selectedRow, 3));
+            JTextField venueField = new JTextField((String) sessionsTableModel.getValueAt(selectedRow, 5));
+
+            Object[] message = {
+                "Session Name:", nameField,
+                "Date:", dateField,
+                "Time:", timeField,
+                "Venue:", venueField
+            };
+
+            int option = JOptionPane.showConfirmDialog(this, message, "Edit Session Details", JOptionPane.OK_CANCEL_OPTION);
+            if (option == JOptionPane.OK_OPTION) {
+                if (new SessionDAO().updateSession(sessionId, nameField.getText(), dateField.getText(), 
+                                                timeField.getText(), venueField.getText())) {
+                    JOptionPane.showMessageDialog(this, "Session updated successfully!");
+                    loadSessionsFromDB();
+                }
             }
         });
 
         return panel;
     }
     
+    public Object getCellEditorValue() {
+        if (isPushed) {
+            int selectedRow = submissionsTable.getSelectedRow();
+            int submissionId = (int) submissionsTableModel.getValueAt(selectedRow, 0);
+
+            // 1. Get Evaluator ID from User
+            String evalIdStr = JOptionPane.showInputDialog(CoordinatorPanel.this, 
+                "Enter Evaluator ID for Submission #" + submissionId + ":");
+            
+            // 2. Get Session ID from User (Since you just made sessions like 'SESA')
+            String sessIdStr = JOptionPane.showInputDialog(CoordinatorPanel.this, 
+                "Enter Session ID (e.g., 1 for SESA):");
+
+            if (evalIdStr != null && sessIdStr != null) {
+                try {
+                    int evalId = Integer.parseInt(evalIdStr);
+                    int sessId = Integer.parseInt(sessIdStr);
+
+                    AssignmentDAO assignDao = new AssignmentDAO();
+                    // 3. Save to session_assignments table
+                    if (assignDao.assignToEvaluator(sessId, submissionId, evalId)) {
+                        // 4. Update status in submissions table to 'ASSIGNED'
+                        new SubmissionDAO().updateSubmissionStatus(submissionId, "ASSIGNED");
+                        JOptionPane.showMessageDialog(CoordinatorPanel.this, "Successfully Assigned!");
+                        loadSubmissionsFromDB(); // Refresh UI
+                    }
+                } catch (NumberFormatException ex) {
+                    JOptionPane.showMessageDialog(CoordinatorPanel.this, "Error: Use numbers for IDs.");
+                }
+            }
+        }
+        isPushed = false;
+        return "Review";
+    }
+
     private JPanel createSubmissionReviewPanel() {
         JPanel panel = new JPanel(new BorderLayout(15, 15));
         panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
@@ -268,15 +322,29 @@ public class CoordinatorPanel extends JPanel {
         
         panel.add(new JScrollPane(submissionsTable), BorderLayout.CENTER);
 
-        assignBtn.addActionListener(e -> {
-        // Automatically switch to the Submission Review tab (index 2)
-        JTabbedPane parentTabbedPane = (JTabbedPane) SwingUtilities.getAncestorOfClass(JTabbedPane.class, this);
-        if (parentTabbedPane != null) {
-            parentTabbedPane.setSelectedIndex(2);
-            JOptionPane.showMessageDialog(this, "Select a submission and click 'Review' to assign an evaluator.");
-        }
-        });
+        deleteSessionBtn.addActionListener(e -> {
+            int selectedRow = sessionsTable.getSelectedRow();
+            if (selectedRow == -1) {
+                JOptionPane.showMessageDialog(this, "Please select a session to delete.");
+                return;
+            }
 
+            String sesIdStr = (String) sessionsTableModel.getValueAt(selectedRow, 0);
+            int sessionId = Integer.parseInt(sesIdStr.replace("SES-", ""));
+
+            int confirm = JOptionPane.showConfirmDialog(this, 
+                "Are you sure you want to delete " + sesIdStr + "?\nAll assignments to this session will also be removed.", 
+                "Confirm Deletion", JOptionPane.YES_NO_OPTION);
+
+            if (confirm == JOptionPane.YES_OPTION) {
+                if (new SessionDAO().deleteSession(sessionId)) {
+                    JOptionPane.showMessageDialog(this, "Session deleted successfully.");
+                    loadSessionsFromDB(); // Refresh the table
+                } else {
+                    JOptionPane.showMessageDialog(this, "Error deleting session.");
+                }
+            }
+        });
         return panel;
     }
 
@@ -294,7 +362,15 @@ public class CoordinatorPanel extends JPanel {
             submissionsTableModel.setRowCount(0);
             List<Object[]> submissions = new SubmissionDAO().getAllSubmissions();
             for (Object[] row : submissions) {
-                Object[] tableRow = new Object[]{row[0], "Student " + row[0], row[1], row[2], row[3], row[4], "Review"};
+                Object[] tableRow = new Object[]{
+                    row[0],               
+                    "Student " + row[0],  
+                    row[1],               
+                    row[4],               
+                    row[3],               
+                    row[6],               
+                    "Review"             
+                };
                 submissionsTableModel.addRow(tableRow);
             }
         }
@@ -373,21 +449,31 @@ public class CoordinatorPanel extends JPanel {
         public Object getCellEditorValue() {
             if (isPushed) {
                 int selectedRow = submissionsTable.getSelectedRow();
-                int submissionId = (int) submissionsTableModel.getValueAt(selectedRow, 0);
+                int subId = (int) submissionsTableModel.getValueAt(selectedRow, 0);
 
+                // 1. Get Evaluator ID from user
                 String evalIdStr = JOptionPane.showInputDialog(CoordinatorPanel.this, 
-                    "Enter Evaluator ID to assign for Submission #" + submissionId + ":");
+                    "Enter Evaluator ID for Submission #" + subId + ":");
                 
-                if (evalIdStr != null && !evalIdStr.isEmpty()) {
+                // 2. Get Session ID from user (e.g., 1 for 'SESA')
+                String sessIdStr = JOptionPane.showInputDialog(CoordinatorPanel.this, 
+                    "Enter Session ID for this presentation:");
+
+                if (evalIdStr != null && sessIdStr != null) {
                     try {
                         int evalId = Integer.parseInt(evalIdStr);
-                        if (new AssignmentDAO().assignToEvaluator(1, submissionId, evalId)) {
-                            JOptionPane.showMessageDialog(CoordinatorPanel.this, "Assigned Successfully!");
-                            new SubmissionDAO().updateSubmissionStatus(submissionId, "ASSIGNED");
-                            loadSubmissionsFromDB(); // Refresh table
+                        int sessId = Integer.parseInt(sessIdStr);
+
+                        AssignmentDAO assignDao = new AssignmentDAO();
+                        // 3. Insert into session_assignments table
+                        if (assignDao.assignToEvaluator(sessId, subId, evalId)) {
+                            // 4. Update submission status to 'ASSIGNED'
+                            new SubmissionDAO().updateSubmissionStatus(subId, "ASSIGNED");
+                            JOptionPane.showMessageDialog(CoordinatorPanel.this, "Successfully Assigned!");
+                            loadSubmissionsFromDB(); // Refresh table view
                         }
                     } catch (NumberFormatException ex) {
-                        JOptionPane.showMessageDialog(CoordinatorPanel.this, "Invalid ID format.");
+                        JOptionPane.showMessageDialog(CoordinatorPanel.this, "Error: Use numeric IDs.");
                     }
                 }
             }

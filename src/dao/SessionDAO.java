@@ -48,4 +48,50 @@ public class SessionDAO {
         }
         return sessions;
     }
+
+    public boolean updateSession(int id, String name, String date, String time, String venue) {
+        String sql = "UPDATE sessions SET name = ?, date = ?, time = ?, venue = ? WHERE id = ?";
+        try (Connection conn = SQLiteConnection.connect();
+            PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, name);
+            pstmt.setString(2, date);
+            pstmt.setString(3, time);
+            pstmt.setString(4, venue);
+            pstmt.setInt(5, id);
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public boolean deleteSession(int sessionId) {
+        // 1. First, remove any assignments linked to this session to prevent foreign key errors
+        String deleteAssignmentsSql = "DELETE FROM session_assignments WHERE session_id = ?";
+        String deleteSessionSql = "DELETE FROM sessions WHERE id = ?";
+        
+        try (Connection conn = SQLiteConnection.connect()) {
+            conn.setAutoCommit(false); // Use a transaction
+            
+            try (PreparedStatement pstmt1 = conn.prepareStatement(deleteAssignmentsSql);
+                PreparedStatement pstmt2 = conn.prepareStatement(deleteSessionSql)) {
+                
+                pstmt1.setInt(1, sessionId);
+                pstmt1.executeUpdate();
+                
+                pstmt2.setInt(1, sessionId);
+                int affectedRows = pstmt2.executeUpdate();
+                
+                conn.commit();
+                return affectedRows > 0;
+            } catch (SQLException e) {
+                conn.rollback();
+                e.printStackTrace();
+                return false;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
 }
