@@ -1,6 +1,9 @@
 package dashboard;
 
+import dao.EvaluationDAO;
+import dao.SubmissionDAO;
 import java.awt.*;
+import java.util.List;
 import javax.swing.*;
 import javax.swing.border.*;
 import javax.swing.table.*;
@@ -9,6 +12,9 @@ public class EvaluatorPanel extends JPanel {
     private MainFrame mainFrame;
     private JTable assignmentsTable, completedTable;
     private DefaultTableModel assignmentsTableModel, completedTableModel;
+    // We will use assignmentsTableModel instead of the generic tableModel variable
+    private int currentSubmissionId = -1; 
+    private int currentEvaluatorId = 3;
     
     public EvaluatorPanel(MainFrame mainFrame) {
         this.mainFrame = mainFrame;
@@ -16,33 +22,67 @@ public class EvaluatorPanel extends JPanel {
         setBackground(new Color(240, 245, 250));
         
         // Header Panel
-        JPanel headerPanel = createHeaderPanel();
-        add(headerPanel, BorderLayout.NORTH);
+        add(createHeaderPanel(), BorderLayout.NORTH);
         
-        // Main Content Panel with Tabbed Pane
         JTabbedPane tabbedPane = new JTabbedPane();
         tabbedPane.setFont(new Font("Segoe UI", Font.BOLD, 14));
         
-        // Tab 1: Assigned Presentations (Reviews assigned presentations)
         tabbedPane.addTab("Assigned Presentations", createAssignmentsPanel());
-        
-        // Tab 2: Evaluation Form (Provides evaluation based on rubrics)
         tabbedPane.addTab("Evaluate Presentation", createEvaluationFormPanel());
-        
-        // Tab 3: Evaluation Rubric (Predefined rubrics for scoring)
         tabbedPane.addTab("Evaluation Rubric", createRubricPanel());
-        
-        // Tab 4: Completed Evaluations
         tabbedPane.addTab("Completed", createCompletedPanel());
         
         add(tabbedPane, BorderLayout.CENTER);
-        
-        // Footer
         add(createFooterPanel(), BorderLayout.SOUTH);
+
+        // Fetch data from database immediately
+        loadAssignments();
+    }
+
+    public void loadAssignments() {
+        // Pointing to assignmentsTableModel specifically
+        if (assignmentsTableModel != null) {
+            assignmentsTableModel.setRowCount(0); // Clear mock data
+
+            SubmissionDAO dao = new SubmissionDAO();
+            // Use the evaluator ID (3) to fetch real assignments
+            List<Object[]> assignments = dao.getAssignmentsForEvaluator(currentEvaluatorId);
+
+            for (Object[] row : assignments) {
+                assignmentsTableModel.addRow(row);
+            }
+        }
     }
     
     private JPanel createAssignmentsPanel() {
-        return createEvaluationTasksPanel();
+        JPanel panel = new JPanel(new BorderLayout(15, 15));
+        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        panel.setBackground(Color.WHITE);
+        
+        JLabel title = new JLabel("Assigned Evaluations");
+        title.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        
+        // Initialize the model here
+        String[] columnNames = {"ID", "Title", "Type", "Status", "Action"};
+        assignmentsTableModel = new DefaultTableModel(columnNames, 0);
+        
+        assignmentsTable = new JTable(assignmentsTableModel);
+        assignmentsTable.setRowHeight(35);
+        
+        // Selection Listener to update currentSubmissionId
+        assignmentsTable.getSelectionModel().addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) {
+                int row = assignmentsTable.getSelectedRow();
+                if (row != -1) {
+                    currentSubmissionId = (int) assignmentsTable.getValueAt(row, 0);
+                }
+            }
+        });
+
+        panel.add(title, BorderLayout.NORTH);
+        panel.add(new JScrollPane(assignmentsTable), BorderLayout.CENTER);
+        
+        return panel;
     }
     
     private JPanel createCompletedPanel() {
@@ -140,6 +180,25 @@ public class EvaluatorPanel extends JPanel {
         // Submit button
         JButton submitBtn = createActionButton("Submit Evaluation", new Color(46, 204, 113));
         submitBtn.setFont(new Font("Segoe UI", Font.BOLD, 14));
+
+        submitBtn.addActionListener(e -> {
+            if (currentSubmissionId == -1) {
+                JOptionPane.showMessageDialog(this, "Please select a submission first!");
+                return;
+            }
+
+            int clarity = (int) claritySpinner.getValue();
+            int method = (int) methodSpinner.getValue();
+            int res = (int) resultsSpinner.getValue();
+            int quality = (int) presSpinner.getValue();
+            String comment = overallComment.getText();
+
+            EvaluationDAO evalDao = new EvaluationDAO();
+            if (evalDao.submitEvaluation(currentSubmissionId, currentEvaluatorId, clarity, method, res, quality, comment)) {
+                JOptionPane.showMessageDialog(this, "Evaluation Saved!");
+                new SubmissionDAO().updateSubmissionStatus(currentSubmissionId, "COMPLETED");
+            }
+        });
         
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
         buttonPanel.setOpaque(false);
@@ -590,4 +649,6 @@ public class EvaluatorPanel extends JPanel {
             return label;
         }
     }
+
+    
 }

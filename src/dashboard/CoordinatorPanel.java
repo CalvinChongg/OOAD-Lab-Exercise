@@ -1,7 +1,10 @@
 package dashboard;
 
-import dao.SubmissionDAO;
+import dao.AssignmentDAO;
+import dao.SessionDAO;
+import dao.SubmissionDAO; // Ensure this exists
 import java.awt.*;
+import java.util.List;
 import javax.swing.*;
 import javax.swing.border.*;
 import javax.swing.table.*;
@@ -10,38 +13,37 @@ public class CoordinatorPanel extends JPanel {
     private MainFrame mainFrame;
     private JTable sessionsTable, submissionsTable, awardsTable;
     private DefaultTableModel sessionsTableModel, submissionsTableModel, awardsTableModel;
-    
+
+    private JButton createSessionBtn, editSessionBtn, assignBtn;
+
     public CoordinatorPanel(MainFrame mainFrame) {
         this.mainFrame = mainFrame;
         setLayout(new BorderLayout(10, 10));
         setBackground(new Color(240, 245, 250));
         
-        // Header Panel with LOGOUT BUTTON
         JPanel headerPanel = createHeaderPanel();
         add(headerPanel, BorderLayout.NORTH);
         
-        // Main Content Panel with Tabbed Pane
         JTabbedPane tabbedPane = new JTabbedPane();
         tabbedPane.setFont(new Font("Segoe UI", Font.BOLD, 14));
         
-        // Tab 1: Dashboard
         tabbedPane.addTab("Dashboard", createDashboardPanel());
-        
-        // Tab 2: Session Management
         tabbedPane.addTab("Session Management", createSessionManagementPanel());
-        
-        // Tab 3: Submission Review
         tabbedPane.addTab("Submission Review", createSubmissionReviewPanel());
-        
-        // Tab 4: Schedule
         tabbedPane.addTab("Schedule", createSchedulePanel());
-        
-        // Tab 5: Awards & Evaluations
         tabbedPane.addTab("Awards", createAwardsPanel());
         
         add(tabbedPane, BorderLayout.CENTER);
         
-        // Footer
+        // AUTO-REFRESH logic when switching tabs
+        tabbedPane.addChangeListener(e -> {
+            if (tabbedPane.getSelectedIndex() == 1) { // Session Management Tab
+                loadSessionsFromDB();
+            } else if (tabbedPane.getSelectedIndex() == 2) { // Submission Review Tab
+                loadSubmissionsFromDB();
+            }
+        });
+        
         add(createFooterPanel(), BorderLayout.SOUTH);
     }
     
@@ -65,7 +67,7 @@ public class CoordinatorPanel extends JPanel {
         leftPanel.add(title);
         leftPanel.add(subtitle);
         
-        // RIGHT SIDE: LOGOUT BUTTON (FIXED AND PROMINENT)
+        // RIGHT SIDE: LOGOUT BUTTON
         JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
         rightPanel.setOpaque(false);
         
@@ -81,35 +83,19 @@ public class CoordinatorPanel extends JPanel {
         logoutBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
         logoutBtn.setPreferredSize(new Dimension(120, 45));
         
-        // Add hover effects
         logoutBtn.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseEntered(java.awt.event.MouseEvent evt) {
                 logoutBtn.setBackground(new Color(192, 57, 43));
-                logoutBtn.setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createLineBorder(new Color(169, 50, 38), 2),
-                    BorderFactory.createEmptyBorder(10, 25, 10, 25)
-                ));
             }
-            
             public void mouseExited(java.awt.event.MouseEvent evt) {
                 logoutBtn.setBackground(new Color(231, 76, 60));
-                logoutBtn.setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createLineBorder(new Color(192, 57, 43), 2),
-                    BorderFactory.createEmptyBorder(10, 25, 10, 25)
-                ));
             }
         });
         
-        // Logout action with confirmation
         logoutBtn.addActionListener(e -> {
-            int confirm = JOptionPane.showConfirmDialog(
-                CoordinatorPanel.this,
-                "Are you sure you want to logout?",
-                "Confirm Logout",
-                JOptionPane.YES_NO_OPTION,
-                JOptionPane.QUESTION_MESSAGE
-            );
-            
+            int confirm = JOptionPane.showConfirmDialog(CoordinatorPanel.this,
+                "Are you sure you want to logout?", "Confirm Logout",
+                JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
             if (confirm == JOptionPane.YES_OPTION) {
                 mainFrame.switchScreen("LOGIN");
             }
@@ -127,7 +113,6 @@ public class CoordinatorPanel extends JPanel {
         panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
         panel.setBackground(Color.WHITE);
         
-        // Overview Card
         JPanel overviewCard = new JPanel(new BorderLayout(10, 10));
         overviewCard.setBackground(new Color(41, 128, 185));
         overviewCard.setBorder(new CompoundBorder(
@@ -149,10 +134,8 @@ public class CoordinatorPanel extends JPanel {
         
         overviewCard.add(overviewTitle, BorderLayout.NORTH);
         overviewCard.add(overviewText, BorderLayout.CENTER);
-        
         panel.add(overviewCard, BorderLayout.NORTH);
         
-        // Quick Stats
         JPanel statsPanel = new JPanel(new GridLayout(2, 4, 15, 15));
         statsPanel.setBorder(BorderFactory.createEmptyBorder(20, 0, 0, 0));
         statsPanel.setBackground(Color.WHITE);
@@ -167,7 +150,6 @@ public class CoordinatorPanel extends JPanel {
         statsPanel.add(createCoordStatCard("Days to Event", "45", new Color(142, 68, 173)));
         
         panel.add(statsPanel, BorderLayout.CENTER);
-        
         return panel;
     }
     
@@ -176,20 +158,19 @@ public class CoordinatorPanel extends JPanel {
         panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
         panel.setBackground(Color.WHITE);
         
-        // Header
         JPanel headerPanel = new JPanel(new BorderLayout());
         headerPanel.setOpaque(false);
         
         JLabel title = new JLabel("Session Management");
         title.setFont(new Font("Segoe UI", Font.BOLD, 18));
-        title.setForeground(new Color(52, 73, 94));
         
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
         buttonPanel.setOpaque(false);
-        
-        JButton createSessionBtn = createActionButton("Create Session", new Color(46, 204, 113));
-        JButton editSessionBtn = createActionButton("Edit Session", new Color(52, 152, 219));
-        JButton assignBtn = createActionButton("Assign Presentations", new Color(155, 89, 182));
+
+        // INITIALIZE THE BUTTONS
+        createSessionBtn = createActionButton("Create Session", new Color(46, 204, 113));
+        editSessionBtn = createActionButton("Edit Session", new Color(52, 152, 219));
+        assignBtn = createActionButton("Assign Presentations", new Color(155, 89, 182));
         
         buttonPanel.add(createSessionBtn);
         buttonPanel.add(editSessionBtn);
@@ -197,38 +178,53 @@ public class CoordinatorPanel extends JPanel {
         
         headerPanel.add(title, BorderLayout.WEST);
         headerPanel.add(buttonPanel, BorderLayout.EAST);
-        
         panel.add(headerPanel, BorderLayout.NORTH);
         
-        // Sessions Table
-        String[] columnNames = {"Session ID", "Name", "Date", "Time", "Type", "Venue", "Status", "Actions"};
-        sessionsTableModel = new DefaultTableModel(columnNames, 0);
-        
-        // Add sample data
-        Object[][] sampleData = {
-            {"SES-001", "Opening Ceremony", "2024-05-15", "09:00-10:00", "General", "Main Hall", "Scheduled", "Edit"},
-            {"SES-002", "Oral Session A", "2024-05-15", "10:30-12:30", "Oral", "Room 101", "Scheduled", "Edit"},
-            {"SES-003", "Poster Session I", "2024-05-15", "14:00-16:00", "Poster", "Exhibition Hall", "Scheduled", "Edit"},
-            {"SES-004", "Keynote Speech", "2024-05-16", "09:00-10:30", "General", "Main Hall", "Scheduled", "Edit"},
-            {"SES-005", "Oral Session B", "2024-05-16", "11:00-13:00", "Oral", "Room 102", "Planning", "Edit"}
-        };
-        
-        for (Object[] row : sampleData) {
-            sessionsTableModel.addRow(row);
-        }
-        
+        sessionsTableModel = new DefaultTableModel(new String[]{"ID", "Name", "Date", "Time", "Type", "Venue", "Status"}, 0);
         sessionsTable = new JTable(sessionsTableModel);
-        sessionsTable.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        sessionsTable.setRowHeight(35);
-        sessionsTable.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 12));
-        sessionsTable.getTableHeader().setBackground(new Color(41, 128, 185));
-        sessionsTable.getTableHeader().setForeground(Color.WHITE);
+        loadSessionsFromDB(); // Load real data
         
-        JScrollPane scrollPane = new JScrollPane(sessionsTable);
-        scrollPane.setBorder(new LineBorder(new Color(220, 220, 220), 1));
-        
-        panel.add(scrollPane, BorderLayout.CENTER);
-        
+        panel.add(new JScrollPane(sessionsTable), BorderLayout.CENTER);
+
+        // CREATE SESSION ACTION
+        createSessionBtn.addActionListener(e -> {
+            JTextField nameField = new JTextField();
+            JTextField dateField = new JTextField("2026-05-15");
+            JTextField timeField = new JTextField("09:00-10:00");
+            JComboBox<String> typeBox = new JComboBox<>(new String[]{"General", "Oral", "Poster"});
+            JTextField venueField = new JTextField();
+
+            Object[] message = {
+                "Session Name:", nameField,
+                "Date (YYYY-MM-DD):", dateField,
+                "Time (HH:mm-HH:mm):", timeField,
+                "Type:", typeBox,
+                "Venue:", venueField
+            };
+
+            int option = JOptionPane.showConfirmDialog(this, message, "Create New Session", JOptionPane.OK_CANCEL_OPTION);
+            if (option == JOptionPane.OK_OPTION) {
+                if (new SessionDAO().createSession(nameField.getText(), dateField.getText(), timeField.getText(), 
+                                                (String)typeBox.getSelectedItem(), venueField.getText())) {
+                    JOptionPane.showMessageDialog(this, "Session Created Successfully!");
+                    loadSessionsFromDB();
+                }
+            }
+        });
+
+        // ASSIGN PRESENTATIONS ACTION (Jump to Tab 2)
+        assignBtn.addActionListener(e -> {
+            // Find the JTabbedPane and switch to "Submission Review"
+            Container parent = getParent();
+            while (parent != null && !(parent instanceof JTabbedPane)) {
+                parent = parent.getParent();
+            }
+            if (parent instanceof JTabbedPane) {
+                ((JTabbedPane) parent).setSelectedIndex(2);
+                JOptionPane.showMessageDialog(this, "Select a submission and click 'Review' to assign an evaluator.");
+            }
+        });
+
         return panel;
     }
     
@@ -241,60 +237,67 @@ public class CoordinatorPanel extends JPanel {
         title.setFont(new Font("Segoe UI", Font.BOLD, 18));
         title.setForeground(new Color(52, 73, 94));
         
-        // Filter Panel
         JPanel filterPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 10));
         filterPanel.setOpaque(false);
-        
         filterPanel.add(new JLabel("Filter by:"));
-        JComboBox<String> filterCombo = new JComboBox<>(new String[]{"All", "Pending", "Approved", "Rejected", "Oral", "Poster"});
-        filterPanel.add(filterCombo);
-        
-        JButton filterBtn = new JButton("Apply Filter");
-        filterBtn.setBackground(new Color(52, 152, 219));
-        filterBtn.setForeground(Color.WHITE);
-        filterPanel.add(filterBtn);
+        filterPanel.add(new JComboBox<>(new String[]{"All", "Pending", "Approved", "Rejected"}));
+        filterPanel.add(createActionButton("Apply Filter", new Color(52, 152, 219)));
         
         JPanel northPanel = new JPanel(new BorderLayout());
         northPanel.setOpaque(false);
         northPanel.add(title, BorderLayout.WEST);
         northPanel.add(filterPanel, BorderLayout.EAST);
-        
         panel.add(northPanel, BorderLayout.NORTH);
         
-        // Submissions Table
-        String[] columnNames = {"ID", "Student", "Title", "Type", "Supervisor", "Status", "Review", "Action"};
-        submissionsTableModel = new DefaultTableModel(columnNames, 0);
+        // INTEGRATED DATABASE DATA
+        String[] columnNames = {"ID", "Student", "Title", "Type", "Supervisor", "Status", "Action"};
+        submissionsTableModel = new DefaultTableModel(columnNames, 0) {
+            @Override public boolean isCellEditable(int row, int col) { return col == 6; }
+        };
         
-        // Add sample data
-        // Object[][] sampleSubmissions = {
-        //     {1, "John Doe", "AI in Healthcare", "Oral", "Dr. Smith", "Pending", "", "Review"},
-        //     {2, "Jane Smith", "Quantum Computing", "Poster", "Dr. Johnson", "Pending", "", "Review"},
-        //     {3, "Bob Wilson", "Renewable Energy", "Oral", "Dr. Brown", "Approved", "8.5/10", "View"},
-        //     {4, "Alice Brown", "Climate Change", "Poster", "Dr. Davis", "Rejected", "4/10", "View"},
-        //     {5, "Charlie Lee", "Space Exploration", "Oral", "Dr. Wilson", "Pending", "", "Review"}
-        // };
-
-        SubmissionDAO dao = new SubmissionDAO();
-        var allSubmissions = dao.getAllSubmissions();
-        submissionsTableModel.setRowCount(0);
-        
-        for (Object[] row : allSubmissions) {
-            submissionsTableModel.addRow(row);
-        }
+        loadSubmissionsFromDB(); // Helper to refresh data
         
         submissionsTable = new JTable(submissionsTableModel);
-        submissionsTable.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         submissionsTable.setRowHeight(35);
-        submissionsTable.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 12));
         submissionsTable.getTableHeader().setBackground(new Color(41, 128, 185));
         submissionsTable.getTableHeader().setForeground(Color.WHITE);
         
-        JScrollPane scrollPane = new JScrollPane(submissionsTable);
-        scrollPane.setBorder(new LineBorder(new Color(220, 220, 220), 1));
+        // Custom Renderer and Editor for the "Action" button
+        submissionsTable.getColumnModel().getColumn(6).setCellRenderer(new ButtonRenderer());
+        submissionsTable.getColumnModel().getColumn(6).setCellEditor(new ButtonEditor(new JCheckBox()));
         
-        panel.add(scrollPane, BorderLayout.CENTER);
-        
+        panel.add(new JScrollPane(submissionsTable), BorderLayout.CENTER);
+
+        assignBtn.addActionListener(e -> {
+        // Automatically switch to the Submission Review tab (index 2)
+        JTabbedPane parentTabbedPane = (JTabbedPane) SwingUtilities.getAncestorOfClass(JTabbedPane.class, this);
+        if (parentTabbedPane != null) {
+            parentTabbedPane.setSelectedIndex(2);
+            JOptionPane.showMessageDialog(this, "Select a submission and click 'Review' to assign an evaluator.");
+        }
+        });
+
         return panel;
+    }
+
+    public void loadSessionsFromDB() {
+        if (sessionsTableModel != null) {
+            sessionsTableModel.setRowCount(0);
+            List<Object[]> sessions = new SessionDAO().getAllSessions();
+            for (Object[] row : sessions) sessionsTableModel.addRow(row);
+        }
+    } 
+
+    // public as needed for refreshing in mainframe
+    public void loadSubmissionsFromDB() {
+        if (submissionsTableModel != null) {
+            submissionsTableModel.setRowCount(0);
+            List<Object[]> submissions = new SubmissionDAO().getAllSubmissions();
+            for (Object[] row : submissions) {
+                Object[] tableRow = new Object[]{row[0], "Student " + row[0], row[1], row[2], row[3], row[4], "Review"};
+                submissionsTableModel.addRow(tableRow);
+            }
+        }
     }
     
     private JPanel createSchedulePanel() {
@@ -304,36 +307,16 @@ public class CoordinatorPanel extends JPanel {
         
         JLabel title = new JLabel("Seminar Schedule");
         title.setFont(new Font("Segoe UI", Font.BOLD, 18));
-        title.setForeground(new Color(52, 73, 94));
         
-        // Schedule Cards
         JPanel scheduleGrid = new JPanel(new GridLayout(3, 1, 15, 15));
         scheduleGrid.setBackground(Color.WHITE);
-        
-        scheduleGrid.add(createScheduleCard("Day 1 - May 15, 2024", "Main Hall & Exhibition Area", 
-            "• 09:00-10:00: Opening Ceremony\n• 10:30-12:30: Oral Session A\n• 14:00-16:00: Poster Session I"));
-        
-        scheduleGrid.add(createScheduleCard("Day 2 - May 16, 2024", "Main Hall & Seminar Rooms", 
-            "• 09:00-10:30: Keynote Speech\n• 11:00-13:00: Oral Session B\n• 14:30-16:30: Workshop"));
-        
-        scheduleGrid.add(createScheduleCard("Day 3 - May 17, 2024", "Main Hall", 
-            "• 10:00-12:00: Awards Ceremony\n• 12:00-13:00: Closing Remarks\n• 13:00-14:00: Networking Lunch"));
+        scheduleGrid.add(createScheduleCard("Day 1 - May 15, 2024", "Main Hall", "• 09:00: Opening\n• 10:30: Oral Session A"));
+        scheduleGrid.add(createScheduleCard("Day 2 - May 16, 2024", "Seminar Rooms", "• 09:00: Keynote\n• 11:00: Oral Session B"));
+        scheduleGrid.add(createScheduleCard("Day 3 - May 17, 2024", "Main Hall", "• 10:00: Awards\n• 12:00: Closing"));
         
         panel.add(title, BorderLayout.NORTH);
         panel.add(scheduleGrid, BorderLayout.CENTER);
-        
-        // Print Button
-        JButton printBtn = new JButton("Print Schedule");
-        printBtn.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        printBtn.setBackground(new Color(46, 204, 113));
-        printBtn.setForeground(Color.WHITE);
-        printBtn.setBorder(new RoundedBorder(8));
-        
-        JPanel southPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        southPanel.setOpaque(false);
-        southPanel.add(printBtn);
-        
-        panel.add(southPanel, BorderLayout.SOUTH);
+        panel.add(createActionButton("Print Schedule", new Color(46, 204, 113)), BorderLayout.SOUTH);
         
         return panel;
     }
@@ -345,176 +328,122 @@ public class CoordinatorPanel extends JPanel {
         
         JLabel title = new JLabel("Award Nomination & Evaluation Results");
         title.setFont(new Font("Segoe UI", Font.BOLD, 18));
-        title.setForeground(new Color(52, 73, 94));
         
-        // Awards Cards
         JPanel awardsPanel = new JPanel(new GridLayout(1, 3, 15, 15));
         awardsPanel.setBackground(Color.WHITE);
-        
-        awardsPanel.add(createAwardCard("🏆 Best Oral", "Highest scoring oral presentation", 
-            new Color(255, 193, 7), "John Doe - AI in Healthcare (9.2/10)"));
-        awardsPanel.add(createAwardCard("📊 Best Poster", "Highest scoring poster presentation", 
-            new Color(33, 150, 243), "Jane Smith - Quantum Computing (9.5/10)"));
-        awardsPanel.add(createAwardCard("👥 People's Choice", "Voted by attendees", 
-            new Color(156, 39, 176), "Open for Voting"));
+        awardsPanel.add(createAwardCard("🏆 Best Oral", "Top Oral Presentation", new Color(255, 193, 7), "John Doe (9.2/10)"));
+        awardsPanel.add(createAwardCard("📊 Best Poster", "Top Poster Presentation", new Color(33, 150, 243), "Jane Smith (9.5/10)"));
+        awardsPanel.add(createAwardCard("👥 People's Choice", "Attendee Vote", new Color(156, 39, 176), "Open"));
         
         panel.add(title, BorderLayout.NORTH);
         panel.add(awardsPanel, BorderLayout.CENTER);
-        
-        // Finalize Button
-        JButton finalizeBtn = new JButton("Finalize Award Winners");
-        finalizeBtn.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        finalizeBtn.setBackground(new Color(46, 204, 113));
-        finalizeBtn.setForeground(Color.WHITE);
-        finalizeBtn.setBorder(new RoundedBorder(8));
-        
-        JPanel southPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
-        southPanel.setOpaque(false);
-        southPanel.add(finalizeBtn);
-        
-        panel.add(southPanel, BorderLayout.SOUTH);
+        panel.add(createActionButton("Finalize Award Winners", new Color(46, 204, 113)), BorderLayout.SOUTH);
         
         return panel;
     }
+
+    // --- INNER CLASSES AND UI HELPERS ---
+
+    class ButtonRenderer extends JButton implements TableCellRenderer {
+        public ButtonRenderer() { setOpaque(true); }
+        public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+            setText("Review");
+            setBackground(new Color(52, 152, 219));
+            setForeground(Color.WHITE);
+            return this;
+        }
+    }
+
+    class ButtonEditor extends DefaultCellEditor {
+        private JButton button;
+        private boolean isPushed;
+
+        public ButtonEditor(JCheckBox checkBox) {
+            super(checkBox);
+            button = new JButton();
+            button.setOpaque(true);
+            button.addActionListener(e -> fireEditingStopped());
+        }
+
+        public Component getTableCellEditorComponent(JTable table, Object value, boolean isSelected, int row, int column) {
+            isPushed = true;
+            return button;
+        }
+
+        public Object getCellEditorValue() {
+            if (isPushed) {
+                int selectedRow = submissionsTable.getSelectedRow();
+                int submissionId = (int) submissionsTableModel.getValueAt(selectedRow, 0);
+
+                String evalIdStr = JOptionPane.showInputDialog(CoordinatorPanel.this, 
+                    "Enter Evaluator ID to assign for Submission #" + submissionId + ":");
+                
+                if (evalIdStr != null && !evalIdStr.isEmpty()) {
+                    try {
+                        int evalId = Integer.parseInt(evalIdStr);
+                        if (new AssignmentDAO().assignToEvaluator(1, submissionId, evalId)) {
+                            JOptionPane.showMessageDialog(CoordinatorPanel.this, "Assigned Successfully!");
+                            new SubmissionDAO().updateSubmissionStatus(submissionId, "ASSIGNED");
+                            loadSubmissionsFromDB(); // Refresh table
+                        }
+                    } catch (NumberFormatException ex) {
+                        JOptionPane.showMessageDialog(CoordinatorPanel.this, "Invalid ID format.");
+                    }
+                }
+            }
+            isPushed = false;
+            return "Review";
+        }
+    }
     
-    private JPanel createAwardCard(String awardName, String description, Color color, String winner) {
+    private JPanel createAwardCard(String name, String desc, Color color, String winner) {
         JPanel card = new JPanel(new BorderLayout(10, 10));
         card.setBackground(Color.WHITE);
-        card.setBorder(new CompoundBorder(
-            new LineBorder(color, 2),
-            BorderFactory.createEmptyBorder(15, 15, 15, 15)
-        ));
-        
-        JLabel nameLabel = new JLabel(awardName);
-        nameLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
-        nameLabel.setForeground(color);
-        
-        JTextArea descArea = new JTextArea(description);
-        descArea.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        descArea.setForeground(new Color(100, 100, 100));
-        descArea.setEditable(false);
-        descArea.setLineWrap(true);
-        descArea.setWrapStyleWord(true);
-        descArea.setOpaque(false);
-        
-        JLabel winnerLabel = new JLabel("Leading: " + winner);
-        winnerLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        winnerLabel.setForeground(new Color(60, 60, 60));
-        
-        JButton nominateBtn = new JButton("Nominate");
-        nominateBtn.setBackground(color);
-        nominateBtn.setForeground(Color.WHITE);
-        nominateBtn.setBorder(new RoundedBorder(5));
-        
-        card.add(nameLabel, BorderLayout.NORTH);
-        card.add(descArea, BorderLayout.CENTER);
-        card.add(winnerLabel, BorderLayout.SOUTH);
-        card.add(nominateBtn, BorderLayout.SOUTH);
-        
+        card.setBorder(new CompoundBorder(new LineBorder(color, 2), BorderFactory.createEmptyBorder(15, 15, 15, 15)));
+        card.add(new JLabel(name), BorderLayout.NORTH);
+        card.add(new JLabel(winner), BorderLayout.SOUTH);
         return card;
     }
     
     private JPanel createCoordStatCard(String title, String value, Color color) {
         JPanel card = new JPanel(new BorderLayout(5, 5));
         card.setBackground(Color.WHITE);
-        card.setBorder(new CompoundBorder(
-            new LineBorder(new Color(220, 220, 220), 1),
-            BorderFactory.createEmptyBorder(15, 15, 15, 15)
-        ));
-        card.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        
-        JLabel titleLabel = new JLabel(title);
-        titleLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        titleLabel.setForeground(new Color(100, 100, 100));
-        
-        JLabel valueLabel = new JLabel(value);
-        valueLabel.setFont(new Font("Segoe UI", Font.BOLD, 24));
-        valueLabel.setForeground(color);
-        valueLabel.setHorizontalAlignment(SwingConstants.CENTER);
-        
-        card.add(titleLabel, BorderLayout.NORTH);
-        card.add(valueLabel, BorderLayout.CENTER);
-        
+        card.setBorder(new CompoundBorder(new LineBorder(new Color(220, 220, 220), 1), BorderFactory.createEmptyBorder(15, 15, 15, 15)));
+        card.add(new JLabel(title), BorderLayout.NORTH);
+        JLabel val = new JLabel(value); val.setFont(new Font("Segoe UI", Font.BOLD, 24)); val.setForeground(color);
+        card.add(val, BorderLayout.CENTER);
         return card;
     }
     
     private JPanel createScheduleCard(String day, String venue, String schedule) {
         JPanel card = new JPanel(new BorderLayout(10, 10));
         card.setBackground(Color.WHITE);
-        card.setBorder(new CompoundBorder(
-            new LineBorder(new Color(41, 128, 185), 1),
-            BorderFactory.createEmptyBorder(15, 15, 15, 15)
-        ));
-        
-        JPanel headerPanel = new JPanel(new BorderLayout());
-        headerPanel.setOpaque(false);
-        
-        JLabel dayLabel = new JLabel(day);
-        dayLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        dayLabel.setForeground(new Color(41, 128, 185));
-        
-        JLabel venueLabel = new JLabel(venue);
-        venueLabel.setFont(new Font("Segoe UI", Font.ITALIC, 12));
-        venueLabel.setForeground(new Color(100, 100, 100));
-        
-        headerPanel.add(dayLabel, BorderLayout.WEST);
-        headerPanel.add(venueLabel, BorderLayout.EAST);
-        
-        JTextArea scheduleArea = new JTextArea(schedule);
-        scheduleArea.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        scheduleArea.setForeground(new Color(50, 50, 50));
-        scheduleArea.setEditable(false);
-        scheduleArea.setOpaque(false);
-        
-        card.add(headerPanel, BorderLayout.NORTH);
-        card.add(scheduleArea, BorderLayout.CENTER);
-        
+        card.setBorder(new CompoundBorder(new LineBorder(new Color(41, 128, 185), 1), BorderFactory.createEmptyBorder(15, 15, 15, 15)));
+        card.add(new JLabel(day), BorderLayout.NORTH);
+        card.add(new JTextArea(schedule), BorderLayout.CENTER);
         return card;
     }
     
     private JButton createActionButton(String text, Color bgColor) {
         JButton button = new JButton(text);
-        button.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         button.setBackground(bgColor);
         button.setForeground(Color.WHITE);
-        button.setFocusPainted(false);
         button.setBorder(new RoundedBorder(6));
-        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
         return button;
     }
     
     private JPanel createFooterPanel() {
-        JPanel footer = new JPanel(new BorderLayout());
+        JPanel footer = new JPanel();
         footer.setBackground(new Color(41, 128, 185));
-        footer.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
-        
-        JLabel footerText = new JLabel(
-            "© 2024 Seminar Management System - Coordinator Module v1.0 | Event: Annual Research Symposium 2024",
-            SwingConstants.CENTER
-        );
-        footerText.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        footerText.setForeground(new Color(200, 200, 200));
-        
-        footer.add(footerText, BorderLayout.CENTER);
+        footer.add(new JLabel("© 2024 Seminar Management System"));
         return footer;
     }
     
-    // Rounded Border class
     class RoundedBorder implements Border {
         private int radius;
-        
-        RoundedBorder(int radius) {
-            this.radius = radius;
-        }
-        
-        public Insets getBorderInsets(Component c) {
-            return new Insets(this.radius+1, this.radius+1, this.radius+1, this.radius+1);
-        }
-        
-        public boolean isBorderOpaque() {
-            return true;
-        }
-        
+        RoundedBorder(int radius) { this.radius = radius; }
+        public Insets getBorderInsets(Component c) { return new Insets(this.radius+1, this.radius+1, this.radius+1, this.radius+1); }
+        public boolean isBorderOpaque() { return true; }
         public void paintBorder(Component c, Graphics g, int x, int y, int width, int height) {
             g.drawRoundRect(x, y, width-1, height-1, radius, radius);
         }

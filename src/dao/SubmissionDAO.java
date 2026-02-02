@@ -64,12 +64,8 @@ public class SubmissionDAO {
 
     public List<Object[]> getAllSubmissions() {
         List<Object[]> submissions = new ArrayList<>();
-        // Using a JOIN to get the student's name from the users table
-        String sql = """
-            SELECT s.id, u.username, s.research_title, s.presentation_type, s.status 
-            FROM submissions s 
-            JOIN users u ON s.student_id = u.id
-            """;
+        // REMOVE any WHERE clause to see everything
+        String sql = "SELECT id, research_title, presentation_type, supervisor_name, status FROM submissions";
         
         try (Connection conn = SQLiteConnection.connect();
             Statement stmt = conn.createStatement();
@@ -78,16 +74,60 @@ public class SubmissionDAO {
             while (rs.next()) {
                 submissions.add(new Object[]{
                     rs.getInt("id"),
-                    rs.getString("username"),
+                    "Student " + rs.getInt("id"), // Placeholder for student name
                     rs.getString("research_title"),
                     rs.getString("presentation_type"),
+                    rs.getString("supervisor_name"),
                     rs.getString("status"),
                     "Review" // Button label
                 });
             }
         } catch (SQLException e) {
-            System.err.println("Error fetching all submissions: " + e.getMessage());
+            e.printStackTrace();
         }
         return submissions;
+    }
+
+    public boolean updateSubmissionStatus(int id, String newStatus) {
+        String sql = "UPDATE submissions SET status = ? WHERE id = ?";
+        try (Connection conn = SQLiteConnection.connect();
+            PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, newStatus);
+            pstmt.setInt(2, id);
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public List<Object[]> getAssignmentsForEvaluator(int evaluatorId) {
+        List<Object[]> assignments = new ArrayList<>();
+        // Join logic to find submissions linked to this specific evaluator
+        String sql = """
+            SELECT s.id, s.research_title, s.presentation_type, s.status 
+            FROM submissions s
+            JOIN session_assignments sa ON s.id = sa.submission_id
+            WHERE sa.evaluator_id = ?
+            """;
+        
+        try (Connection conn = SQLiteConnection.connect();
+            PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, evaluatorId);
+            ResultSet rs = pstmt.executeQuery();
+            
+            while (rs.next()) {
+                assignments.add(new Object[]{
+                    rs.getInt("id"),
+                    rs.getString("research_title"),
+                    rs.getString("presentation_type"),
+                    rs.getString("status"),
+                    "Grade" // Label for the action button
+                });
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return assignments;
     }
 }
