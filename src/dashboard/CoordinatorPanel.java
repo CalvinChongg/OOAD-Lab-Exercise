@@ -375,6 +375,24 @@ public class CoordinatorPanel extends JPanel {
             }
         }
     }
+
+    private void generatePDFReport(JTable table, String reportTitle) {
+        try {
+            // This command triggers the OS print dialog
+            // Selecting "Microsoft Print to PDF" or "Save as PDF" generates the file
+            boolean complete = table.print(JTable.PrintMode.FIT_WIDTH, 
+                new java.text.MessageFormat(reportTitle), 
+                new java.text.MessageFormat("Page {0}"));
+            
+            if (complete) {
+                JOptionPane.showMessageDialog(this, reportTitle + " Generated Successfully!", 
+                    "Success", JOptionPane.INFORMATION_MESSAGE);
+            }
+        } catch (java.awt.print.PrinterException e) {
+            JOptionPane.showMessageDialog(this, "Error generating PDF: " + e.getMessage(), 
+                "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
     
     private DefaultTableModel scheduleTableModel;
 
@@ -386,6 +404,7 @@ public class CoordinatorPanel extends JPanel {
         JLabel title = new JLabel("Generated Seminar Schedule");
         title.setFont(new Font("Segoe UI", Font.BOLD, 18));
 
+        // Setup the Table
         String[] cols = {"Session", "Date/Time", "Venue", "Presentation Title"};
         scheduleTableModel = new DefaultTableModel(cols, 0);
         JTable scheduleTable = new JTable(scheduleTableModel);
@@ -393,10 +412,24 @@ public class CoordinatorPanel extends JPanel {
         panel.add(title, BorderLayout.NORTH);
         panel.add(new JScrollPane(scheduleTable), BorderLayout.CENTER);
         
-        // Add a refresh button to "Generate" the schedule
+        // CHANGE: Use FlowLayout.CENTER to put buttons in the middle
+        JPanel buttonContainer = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 10));
+        buttonContainer.setOpaque(false);
+
+        // 1. Generate/Refresh Button
         JButton generateBtn = createActionButton("Generate/Refresh Schedule", new Color(46, 204, 113));
         generateBtn.addActionListener(e -> loadScheduleFromDB());
-        panel.add(generateBtn, BorderLayout.SOUTH);
+        
+        // 2. Print/PDF Button
+        JButton printScheduleBtn = createActionButton("Generate Schedule PDF", new Color(41, 128, 185));
+        printScheduleBtn.addActionListener(e -> generatePDFReport(scheduleTable, "Seminar Schedule 2026"));
+
+        // Add buttons to container
+        buttonContainer.add(generateBtn);
+        buttonContainer.add(printScheduleBtn);
+        
+        // Add the container to the SOUTH region
+        panel.add(buttonContainer, BorderLayout.SOUTH);
 
         return panel;
     }
