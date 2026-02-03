@@ -94,4 +94,31 @@ public class SessionDAO {
             return false;
         }
     }
+
+    public List<Object[]> getFullSchedule() {
+        List<Object[]> schedule = new ArrayList<>();
+        // Joins Sessions with Submissions to see what is happening where
+        String sql = """
+            SELECT s.name, s.date, s.time, s.venue, sub.research_title 
+            FROM sessions s
+            JOIN session_assignments sa ON s.id = sa.session_id
+            JOIN submissions sub ON sa.submission_id = sub.id
+            ORDER BY s.date, s.time
+            """;
+        try (Connection conn = SQLiteConnection.connect();
+            Statement stmt = conn.createStatement();
+            ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                schedule.add(new Object[]{
+                    rs.getString("name"),
+                    rs.getString("date") + " " + rs.getString("time"),
+                    rs.getString("venue"),
+                    rs.getString("research_title")
+                });
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return schedule;
+    }
 }

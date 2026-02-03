@@ -376,25 +376,37 @@ public class CoordinatorPanel extends JPanel {
         }
     }
     
+    private DefaultTableModel scheduleTableModel;
+
     private JPanel createSchedulePanel() {
         JPanel panel = new JPanel(new BorderLayout(15, 15));
         panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
         panel.setBackground(Color.WHITE);
-        
-        JLabel title = new JLabel("Seminar Schedule");
+
+        JLabel title = new JLabel("Generated Seminar Schedule");
         title.setFont(new Font("Segoe UI", Font.BOLD, 18));
-        
-        JPanel scheduleGrid = new JPanel(new GridLayout(3, 1, 15, 15));
-        scheduleGrid.setBackground(Color.WHITE);
-        scheduleGrid.add(createScheduleCard("Day 1 - May 15, 2024", "Main Hall", "• 09:00: Opening\n• 10:30: Oral Session A"));
-        scheduleGrid.add(createScheduleCard("Day 2 - May 16, 2024", "Seminar Rooms", "• 09:00: Keynote\n• 11:00: Oral Session B"));
-        scheduleGrid.add(createScheduleCard("Day 3 - May 17, 2024", "Main Hall", "• 10:00: Awards\n• 12:00: Closing"));
+
+        String[] cols = {"Session", "Date/Time", "Venue", "Presentation Title"};
+        scheduleTableModel = new DefaultTableModel(cols, 0);
+        JTable scheduleTable = new JTable(scheduleTableModel);
         
         panel.add(title, BorderLayout.NORTH);
-        panel.add(scheduleGrid, BorderLayout.CENTER);
-        panel.add(createActionButton("Print Schedule", new Color(46, 204, 113)), BorderLayout.SOUTH);
+        panel.add(new JScrollPane(scheduleTable), BorderLayout.CENTER);
         
+        // Add a refresh button to "Generate" the schedule
+        JButton generateBtn = createActionButton("Generate/Refresh Schedule", new Color(46, 204, 113));
+        generateBtn.addActionListener(e -> loadScheduleFromDB());
+        panel.add(generateBtn, BorderLayout.SOUTH);
+
         return panel;
+    }
+
+    public void loadScheduleFromDB() {
+        scheduleTableModel.setRowCount(0);
+        List<Object[]> data = new SessionDAO().getFullSchedule();
+        for (Object[] row : data) {
+            scheduleTableModel.addRow(row);
+        }
     }
     
     private JPanel createAwardsPanel() {
