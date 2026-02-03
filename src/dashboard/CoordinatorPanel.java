@@ -1,6 +1,7 @@
 package dashboard;
 
 import dao.AssignmentDAO;
+import dao.ReportDAO;
 import dao.SessionDAO;
 import dao.SubmissionDAO; // Ensure this exists
 import java.awt.*;
@@ -34,13 +35,15 @@ public class CoordinatorPanel extends JPanel {
         tabbedPane.addTab("Awards", createAwardsPanel());
         
         add(tabbedPane, BorderLayout.CENTER);
-        
-        // AUTO-REFRESH logic when switching tabs
+
         tabbedPane.addChangeListener(e -> {
-            if (tabbedPane.getSelectedIndex() == 1) { // Session Management Tab
+            int index = tabbedPane.getSelectedIndex();
+            if (index == 1) {
                 loadSessionsFromDB();
-            } else if (tabbedPane.getSelectedIndex() == 2) { // Submission Review Tab
-                loadSubmissionsFromDB();
+            } else if (index == 2) {
+                    loadSubmissionsFromDB();
+            } else if (index == 4) {
+                loadAwardsFromDB(); 
             }
         });
         
@@ -404,7 +407,6 @@ public class CoordinatorPanel extends JPanel {
         JLabel title = new JLabel("Generated Seminar Schedule");
         title.setFont(new Font("Segoe UI", Font.BOLD, 18));
 
-        // Setup the Table
         String[] cols = {"Session", "Date/Time", "Venue", "Presentation Title"};
         scheduleTableModel = new DefaultTableModel(cols, 0);
         JTable scheduleTable = new JTable(scheduleTableModel);
@@ -412,23 +414,18 @@ public class CoordinatorPanel extends JPanel {
         panel.add(title, BorderLayout.NORTH);
         panel.add(new JScrollPane(scheduleTable), BorderLayout.CENTER);
         
-        // CHANGE: Use FlowLayout.CENTER to put buttons in the middle
         JPanel buttonContainer = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 10));
         buttonContainer.setOpaque(false);
 
-        // 1. Generate/Refresh Button
         JButton generateBtn = createActionButton("Generate/Refresh Schedule", new Color(46, 204, 113));
         generateBtn.addActionListener(e -> loadScheduleFromDB());
         
-        // 2. Print/PDF Button
         JButton printScheduleBtn = createActionButton("Generate Schedule PDF", new Color(41, 128, 185));
         printScheduleBtn.addActionListener(e -> generatePDFReport(scheduleTable, "Seminar Schedule 2026"));
 
-        // Add buttons to container
         buttonContainer.add(generateBtn);
         buttonContainer.add(printScheduleBtn);
         
-        // Add the container to the SOUTH region
         panel.add(buttonContainer, BorderLayout.SOUTH);
 
         return panel;
@@ -442,6 +439,47 @@ public class CoordinatorPanel extends JPanel {
         }
     }
     
+    // private JPanel createAwardsPanel() {
+    //     JPanel panel = new JPanel(new BorderLayout(15, 15));
+    //     panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+    //     panel.setBackground(Color.WHITE);
+        
+    //     JLabel title = new JLabel("Award Nomination & Evaluation Results");
+    //     title.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        
+    //     JPanel awardsPanel = new JPanel(new GridLayout(1, 3, 15, 15));
+    //     awardsPanel.setBackground(Color.WHITE);
+    //     awardsPanel.add(createAwardCard("🏆 Best Oral", "Top Oral Presentation", new Color(255, 193, 7), "John Doe (9.2/10)"));
+    //     awardsPanel.add(createAwardCard("📊 Best Poster", "Top Poster Presentation", new Color(33, 150, 243), "Jane Smith (9.5/10)"));
+    //     awardsPanel.add(createAwardCard("👥 People's Choice", "Attendee Vote", new Color(156, 39, 176), "Open"));
+        
+    //     panel.add(title, BorderLayout.NORTH);
+    //     panel.add(awardsPanel, BorderLayout.CENTER);
+    //     panel.add(createActionButton("Finalize Award Winners", new Color(46, 204, 113)), BorderLayout.SOUTH);
+        
+    //     return panel;
+    // }
+    public void loadAwardsFromDB() {
+        ReportDAO dao = new ReportDAO();
+        
+        // 1. Update the Leaderboard Table
+        awardsTableModel.setRowCount(0);
+        List<Object[]> leaderboard = dao.getLeaderboard();
+        for (Object[] row : leaderboard) {
+            awardsTableModel.addRow(row);
+        }
+        
+        // 2. Update the Trophy Cards at the top
+        String oralWinner = dao.getWinner("Oral");
+        String posterWinner = dao.getWinner("Poster");
+        
+        // We need to re-add the cards to the panel to refresh them
+        // Or simpler: update the labels if you made them class variables.
+        // For now, let's just trigger a repaint after data is set.
+        revalidate();
+        repaint();
+    }
+
     private JPanel createAwardsPanel() {
         JPanel panel = new JPanel(new BorderLayout(15, 15));
         panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
@@ -450,15 +488,55 @@ public class CoordinatorPanel extends JPanel {
         JLabel title = new JLabel("Award Nomination & Evaluation Results");
         title.setFont(new Font("Segoe UI", Font.BOLD, 18));
         
-        JPanel awardsPanel = new JPanel(new GridLayout(1, 3, 15, 15));
-        awardsPanel.setBackground(Color.WHITE);
-        awardsPanel.add(createAwardCard("🏆 Best Oral", "Top Oral Presentation", new Color(255, 193, 7), "John Doe (9.2/10)"));
-        awardsPanel.add(createAwardCard("📊 Best Poster", "Top Poster Presentation", new Color(33, 150, 243), "Jane Smith (9.5/10)"));
-        awardsPanel.add(createAwardCard("👥 People's Choice", "Attendee Vote", new Color(156, 39, 176), "Open"));
+        // Top Section: Visual Cards
+        JPanel awardsCardsPanel = new JPanel(new GridLayout(1, 3, 15, 15));
+        awardsCardsPanel.setBackground(Color.WHITE);
+        awardsCardsPanel.add(createAwardCard("🏆 Best Oral", "Top Oral Presentation", new Color(255, 193, 7), "John Doe (9.2/10)"));
+        awardsCardsPanel.add(createAwardCard("📊 Best Poster", "Top Poster Presentation", new Color(33, 150, 243), "Jane Smith (9.5/10)"));
+        awardsCardsPanel.add(createAwardCard("👥 People's Choice", "Attendee Vote", new Color(156, 39, 176), "Open"));
         
+        // Middle Section: Table of all results (Best for PDF Generation)
+        String[] cols = {"Rank", "Submission Title", "Student", "Type", "Score / 10"};
+        awardsTableModel = new DefaultTableModel(cols, 0);
+        awardsTable = new JTable(awardsTableModel);
+        JScrollPane tableScroll = new JScrollPane(awardsTable);
+        tableScroll.setBorder(BorderFactory.createTitledBorder("Full Evaluation Leaderboard"));
+
+        // Layout Assembly
+        JPanel centerPanel = new JPanel(new BorderLayout(0, 20));
+        centerPanel.setOpaque(false);
+        centerPanel.add(awardsCardsPanel, BorderLayout.NORTH);
+        centerPanel.add(tableScroll, BorderLayout.CENTER);
+
         panel.add(title, BorderLayout.NORTH);
-        panel.add(awardsPanel, BorderLayout.CENTER);
-        panel.add(createActionButton("Finalize Award Winners", new Color(46, 204, 113)), BorderLayout.SOUTH);
+        panel.add(centerPanel, BorderLayout.CENTER);
+        
+        // Bottom Section: Centered Buttons
+        JPanel buttonContainer = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 10));
+        buttonContainer.setOpaque(false);
+
+        JButton finalizeBtn = createActionButton("Finalize Winners", new Color(46, 204, 113));
+        finalizeBtn.addActionListener(e -> {
+            int confirm = JOptionPane.showConfirmDialog(this, 
+                "Do you want to permanently save these winners to the database?", 
+                "Confirm Finalization", JOptionPane.YES_NO_OPTION);
+                
+            if (confirm == JOptionPane.YES_OPTION) {
+                if (new ReportDAO().finalizeAwards()) {
+                    JOptionPane.showMessageDialog(this, "Awards saved to database successfully!");
+                    loadAwardsFromDB(); // Refresh UI to show the new winners in the cards
+                } else {
+                    JOptionPane.showMessageDialog(this, "Error: Could not save awards. Check if winners exist.");
+                }
+            }
+        });
+
+        JButton printAwardsBtn = createActionButton("Generate Awards PDF", new Color(41, 128, 185));
+        printAwardsBtn.addActionListener(e -> generatePDFReport(awardsTable, "Seminar Evaluation Results 2026"));
+
+        buttonContainer.add(finalizeBtn);
+        buttonContainer.add(printAwardsBtn);
+        panel.add(buttonContainer, BorderLayout.SOUTH);
         
         return panel;
     }
