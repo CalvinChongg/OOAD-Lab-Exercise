@@ -13,9 +13,10 @@ public class StudentPanel extends JPanel {
     private JTextArea abstractArea;
     private JComboBox<String> typeCombo;
     private JTextField filePathField;
-    private JButton browseBtn, submitBtn, logoutBtn, viewBtn, refreshBtn, downloadBtn;
+    private JButton browseBtn, submitBtn, logoutBtn, refreshBtn;
     private JTable submissionsTable;
     private DefaultTableModel tableModel;
+    private int currentStudentId;
     
     public StudentPanel(MainFrame mainFrame) {
         this.mainFrame = mainFrame;
@@ -40,6 +41,14 @@ public class StudentPanel extends JPanel {
         
         // Footer
         add(createFooterPanel(), BorderLayout.SOUTH);
+    }
+
+    public void setStudentId(int id) {
+        this.currentStudentId = id;
+    }
+
+    public void loadMySubmissions() {
+        loadSubmissions(null); // Calls your existing logic with no event
     }
     
     private JPanel createHeaderPanel() {
@@ -290,7 +299,7 @@ public class StudentPanel extends JPanel {
         tableModel.setRowCount(0);
         
         // In real implementation, get actual student ID from logged-in user
-        int studentId = 1;
+        int studentId = this.currentStudentId;
         
         SubmissionDAO dao = new SubmissionDAO();
         var submissions = dao.getSubmissionsByStudent(studentId);
@@ -467,7 +476,7 @@ public class StudentPanel extends JPanel {
         
         // In real implementation, get actual student ID from logged-in user
         // For now, use a dummy ID (student1 has ID=5 in seeded data)
-        int studentId = 1;
+        int studentId = this.currentStudentId;
         
         SubmissionDAO dao = new SubmissionDAO();
         boolean success = dao.addSubmission(

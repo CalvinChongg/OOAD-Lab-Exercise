@@ -64,25 +64,23 @@ public class SubmissionDAO {
 
     public List<Object[]> getAllSubmissions() {
         List<Object[]> submissions = new ArrayList<>();
-        // REMOVE any WHERE clause to see everything
-        String sql = "SELECT id, research_title, presentation_type, supervisor_name, status FROM submissions";
+        // Order must match: 0:id, 1:student_id, 2:research_title, 3:presentation_type, 4:supervisor_name, 5:status
+        String sql = "SELECT id, student_id, research_title, presentation_type, supervisor_name, status FROM submissions";
         
-        try (Connection conn = SQLiteConnection.connect();
-            Statement stmt = conn.createStatement();
-            ResultSet rs = stmt.executeQuery(sql)) {
-            
+        try (java.sql.Connection conn = database.SQLiteConnection.connect();
+            java.sql.Statement stmt = conn.createStatement();
+            java.sql.ResultSet rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
                 submissions.add(new Object[]{
                     rs.getInt("id"),
-                    "Student " + rs.getInt("id"), // Placeholder for student name
+                    rs.getInt("student_id"), // This is what getUsernameById uses
                     rs.getString("research_title"),
                     rs.getString("presentation_type"),
                     rs.getString("supervisor_name"),
-                    rs.getString("status"),
-                    "Review" // Button label
+                    rs.getString("status")
                 });
             }
-        } catch (SQLException e) {
+        } catch (java.sql.SQLException e) {
             e.printStackTrace();
         }
         return submissions;

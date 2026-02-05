@@ -7,15 +7,19 @@ import java.util.List;
 
 public class SessionDAO {
     // For the "Create Session" button
+
     public boolean createSession(String name, String date, String time, String type, String venue) {
-        String sql = "INSERT INTO sessions (name, date, time, type, venue, status) VALUES (?, ?, ?, ?, ?, 'Scheduled')";
+        String sql = "INSERT INTO sessions (name, date, time, type, venue) VALUES (?, ?, ?, ?, ?)";
         try (Connection conn = SQLiteConnection.connect();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            
             pstmt.setString(1, name);
             pstmt.setString(2, date);
             pstmt.setString(3, time);
-            pstmt.setString(4, type);
+            // Force uppercase to match 'ORAL' or 'POSTER' exactly
+            pstmt.setString(4, type.toUpperCase()); 
             pstmt.setString(5, venue);
+            
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {
             e.printStackTrace();

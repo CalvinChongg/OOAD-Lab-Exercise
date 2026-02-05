@@ -48,6 +48,11 @@ public class MainFrame extends JFrame {
                 coordinatorPanel.loadSubmissionsFromDB(); 
                 break;
             case "STUDENT":
+                // This is the bridge that prevents the ID 0 error
+                if (loggedInUser != null) {
+                    studentPanel.setStudentId(loggedInUser.getId()); 
+                    studentPanel.loadMySubmissions(); // This ensures the student sees their own list
+                }
                 break;
         }
         

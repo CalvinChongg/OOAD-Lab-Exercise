@@ -228,7 +228,7 @@ public class CoordinatorPanel extends JPanel {
             JTextField nameField = new JTextField();
             JTextField dateField = new JTextField("2026-05-15");
             JTextField timeField = new JTextField("09:00-10:00");
-            JComboBox<String> typeBox = new JComboBox<>(new String[]{"General", "Oral", "Poster"});
+            JComboBox<String> typeBox = new JComboBox<>(new String[]{"ORAL", "POSTER"});
             JTextField venueField = new JTextField();
 
             Object[] message = {
@@ -383,19 +383,41 @@ public class CoordinatorPanel extends JPanel {
         if (submissionsTableModel != null) {
             submissionsTableModel.setRowCount(0);
             List<Object[]> submissions = new SubmissionDAO().getAllSubmissions();
+            
             for (Object[] row : submissions) {
+                // Manually fetch the username based on the student_id (row[1])
+                int studentId = (int) row[1];
+                String actualUsername = getUsernameById(studentId); 
+
                 Object[] tableRow = new Object[]{
-                    row[0],               
-                    "Student " + row[0],  
-                    row[1],               
-                    row[4],               
-                    row[3],               
-                    row[6],               
-                    "Review"             
+                    row[0],             // Column 0: Submission ID
+                    actualUsername,      // Column 1: Corrected Username (ali/abu)
+                    row[2],             // Column 2: Research Title
+                    row[3],             // Column 3: Presentation Type
+                    row[4],             // Column 4: Supervisor Name
+                    row[5],             // Column 5: Status (e.g., ASSIGNED)
+                    "Review"            // Column 6: Action Button
                 };
                 submissionsTableModel.addRow(tableRow);
             }
         }
+    }
+
+    // Helper method to link ID to Username manually
+    private String getUsernameById(int id) {
+        String username = "Unknown";
+        String sql = "SELECT username FROM users WHERE id = ?";
+        try (java.sql.Connection conn = database.SQLiteConnection.connect();
+            java.sql.PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, id);
+            java.sql.ResultSet rs = pstmt.executeQuery();
+            if (rs.next()) {
+                username = rs.getString("username");
+            }
+        } catch (java.sql.SQLException e) {
+            e.printStackTrace();
+        }
+        return username;
     }
 
     private void generatePDFReport(JTable table, String reportTitle) {

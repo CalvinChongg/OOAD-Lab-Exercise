@@ -3,6 +3,7 @@ package dashboard;
 import dao.UserDAO;
 import java.awt.*;
 import javax.swing.*;
+import model.User;
 
 public class LoginPanel extends JPanel {
     private MainFrame mainFrame;
@@ -69,32 +70,31 @@ public class LoginPanel extends JPanel {
             }
 
             UserDAO dao = new UserDAO();
-
+            
             if (dao.checkLogin(uIn, pIn)) {
-                String role = dao.getUserRole(uIn);
+                // 1. Fetch the actual user data from the database
+                User user = dao.getUserData(uIn);
                 
-                // IMPORTANT: We use "0" as a dummy ID here to satisfy your Constructor
-                if (role.equalsIgnoreCase("student")) {
-                    mainFrame.switchScreen("STUDENT");
+                if (user != null) {
+                    // 2. CRITICAL: Save this user to the MainFrame
+                    mainFrame.setLoggedInUser(user);
                     
-                } else if (role.equalsIgnoreCase("coordinator")) {
-                    mainFrame.switchScreen("COORDINATOR");
-                    
-                } else if (role.equalsIgnoreCase("admin")) {
-                    mainFrame.switchScreen("ADMIN");
-                    
-                } else if (role.equalsIgnoreCase("evaluator")) {
-                    mainFrame.switchScreen("EVALUATOR");
-                    
-                }else {
-                    JOptionPane.showMessageDialog(this, "Unknown Role: " + role);
-                }
-            } else {
-                JOptionPane.showMessageDialog(this, 
-                    "Invalid username or password", 
-                    "Login Failed", 
-                    JOptionPane.ERROR_MESSAGE);
+                    // 3. Switch screens as normal
+                    String role = user.getRole();
+                    if (role.equalsIgnoreCase("student")) {
+                        mainFrame.switchScreen("STUDENT");
+                    } else if (role.equalsIgnoreCase("coordinator")) {
+                        mainFrame.switchScreen("COORDINATOR");
+                    } else if (role.equalsIgnoreCase("admin")) {
+                        mainFrame.switchScreen("ADMIN");   
+                    } else if (role.equalsIgnoreCase("evaluator")) {
+                        mainFrame.switchScreen("EVALUATOR");
+                    } else {
+                        JOptionPane.showMessageDialog(this, "Unknown Role: " + role);
+                    }
+                } 
             }
+
         });
     }
 }

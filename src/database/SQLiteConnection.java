@@ -13,7 +13,7 @@ public class SQLiteConnection {
     }
 
     public static void initializeDatabase() {
-        // Create Users Table
+        // 1. Users Table
         String createUserTable = """
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -23,7 +23,7 @@ public class SQLiteConnection {
             );
             """;
 
-        // Create Submissions Table
+        // 2. Submissions Table (Updated CHECK to allow lowercase)
         String createSubmissionsTable = """
             CREATE TABLE IF NOT EXISTS submissions (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -31,7 +31,7 @@ public class SQLiteConnection {
                 research_title TEXT NOT NULL,
                 abstract TEXT NOT NULL,
                 supervisor_name TEXT,
-                presentation_type TEXT CHECK(presentation_type IN ('ORAL', 'POSTER')),
+                presentation_type TEXT CHECK(presentation_type IN ('ORAL', 'POSTER', 'oral', 'poster')),
                 file_path TEXT,
                 submission_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 status TEXT DEFAULT 'PENDING',
@@ -39,22 +39,21 @@ public class SQLiteConnection {
             );
             """;
 
-        // Create Sessions Table
+        // 3. Sessions Table (Updated CHECK to allow lowercase)
         String createSessionsTable = """
             CREATE TABLE IF NOT EXISTS sessions (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                session_name TEXT NOT NULL,
-                session_date DATE NOT NULL,
-                start_time TIME,
-                end_time TIME,
+                name TEXT NOT NULL,
+                date DATE NOT NULL,
+                time TEXT,
+                type TEXT CHECK(type IN ('ORAL', 'POSTER', 'oral', 'poster')),
                 venue TEXT,
-                session_type TEXT CHECK(session_type IN ('ORAL', 'POSTER')),
                 max_presentations INTEGER DEFAULT 10,
                 status TEXT DEFAULT 'PLANNED'
             );
             """;
 
-       // Create Session Assignments Table
+        // 4. Session Assignments Table
         String createSessionAssignmentsTable = """
             CREATE TABLE IF NOT EXISTS session_assignments (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -68,7 +67,7 @@ public class SQLiteConnection {
             );
             """;
 
-        // Create Evaluations Table with Rubrics
+        // 5. Evaluations Table
         String createEvaluationsTable = """
             CREATE TABLE IF NOT EXISTS evaluations (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -87,7 +86,7 @@ public class SQLiteConnection {
             );
             """;
 
-        // Create Awards Table
+        // 6. Awards Table
         String createAwardsTable = """
             CREATE TABLE IF NOT EXISTS awards (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -100,32 +99,27 @@ public class SQLiteConnection {
             );
             """;
 
-        // Seed Initial Users
+        // Seed Users with consistent roles
         String seedUsers = """
             INSERT OR IGNORE INTO users (username, password, roles) VALUES
-            ('ali', '123', 'STUDENT'),
-            ('coordinator', 'coordinator123', 'COORDINATOR'),
-            ('evaluator', 'evaluator123', 'EVALUATOR');
-        """;
+            ('ali', '123', 'student'),
+            ('abu', '123', 'student'),
+            ('coordinator', 'coordinator123', 'coordinator'),
+            ('evaluator', 'evaluator123', 'evaluator');
+            """;
 
-
-        try (var conn = connect();
-             var stmt = conn.createStatement()) {
-            // Create all tables
+        try (java.sql.Connection conn = connect();
+            java.sql.Statement stmt = conn.createStatement()) {
             stmt.execute(createUserTable);
             stmt.execute(createSubmissionsTable);
             stmt.execute(createSessionsTable);
             stmt.execute(createSessionAssignmentsTable);
             stmt.execute(createEvaluationsTable);
             stmt.execute(createAwardsTable);
-            
-            // Seed initial data
             stmt.execute(seedUsers);
-            
-            System.out.println("Database initialized with all required tables");
-        } catch (SQLException e) {
+            System.out.println("Database reset and initialized successfully.");
+        } catch (java.sql.SQLException e) {
             e.printStackTrace();
-            //System.out.println("test");
         }
     }
 }

@@ -1,31 +1,34 @@
 package model;
 
 public abstract class User {
-   protected String id;
-   protected String username;
-   protected String password;
-   protected String role; // "STUDENT", "COORDINATOR", "EVALUATOR"
+    // Change 1: Field type to int
+    protected int id; 
+    protected String username;
+    protected String password;
+    protected String role; // "STUDENT", "COORDINATOR", "EVALUATOR"
 
-   public User(String id, String username, String password, String role) {
+    // Change 2: Constructor parameter to int
+    public User(int id, String username, String password, String role) {
        this.id = id;
        this.username = username;
        this.password = password;
        this.role = role;
-   }
+    }
 
-   public String getUsername() {
+    public String getUsername() {
        return username;
-   }
+    }
 
-   public String getPassword() {
+    public String getPassword() {
        return password;
-   }
+    }
 
-   public String getRole() {
+    public String getRole() {
        return role;
-   }
+    }
 
-   public String getId() {
+    // Change 3: Return type to int
+    public int getId() {
        return id;
-   }
+    }
 }
