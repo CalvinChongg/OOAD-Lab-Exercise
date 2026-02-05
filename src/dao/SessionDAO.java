@@ -121,4 +121,34 @@ public class SessionDAO {
         }
         return schedule;
     }
+
+    public List<String> getAllSessionTitles() {
+        List<String> sessions = new ArrayList<>();
+        String sql = "SELECT name FROM sessions"; // 'name' matches your table column
+        try (Connection conn = SQLiteConnection.connect();
+            Statement stmt = conn.createStatement();
+            ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                sessions.add(rs.getString("name"));
+            }
+        } catch (SQLException e) { e.printStackTrace(); }
+        return sessions;
+    }
+
+    public int getSessionIdByName(String name) {
+        String sql = "SELECT id FROM sessions WHERE name = ?";
+        try (Connection conn = SQLiteConnection.connect();
+            PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            
+            pstmt.setString(1, name);
+            ResultSet rs = pstmt.executeQuery();
+            
+            if (rs.next()) {
+                return rs.getInt("id"); // Returns the numeric ID (e.g., 1 for SESB)
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return -1; // Return -1 if the session name is not found
+    }
 }

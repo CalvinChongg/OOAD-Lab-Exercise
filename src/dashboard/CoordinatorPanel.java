@@ -592,31 +592,46 @@ public class CoordinatorPanel extends JPanel {
         public Object getCellEditorValue() {
             if (isPushed) {
                 int selectedRow = submissionsTable.getSelectedRow();
+                if (selectedRow == -1) return "Review";
+
                 int subId = (int) submissionsTableModel.getValueAt(selectedRow, 0);
-
-                // 1. Get Evaluator ID from user
-                String evalIdStr = JOptionPane.showInputDialog(CoordinatorPanel.this, 
-                    "Enter Evaluator ID for Submission #" + subId + ":");
                 
-                // 2. Get Session ID from user (e.g., 1 for 'SESA')
-                String sessIdStr = JOptionPane.showInputDialog(CoordinatorPanel.this, 
-                    "Enter Session ID for this presentation:");
+                // 1. Fetch data for dropdowns
+                AssignmentDAO assignDao = new AssignmentDAO();
+                java.util.List<String> evaluators = assignDao.getAllEvaluatorNames();
+                List<String> sessions = new SessionDAO().getAllSessionTitles();
 
-                if (evalIdStr != null && sessIdStr != null) {
-                    try {
-                        int evalId = Integer.parseInt(evalIdStr);
-                        int sessId = Integer.parseInt(sessIdStr);
+                // 2. Create the Dropdowns
+                JComboBox<String> evaluatorBox = new JComboBox<>(evaluators.toArray(new String[0]));
+                JComboBox<String> sessionBox = new JComboBox<>(sessions.toArray(new String[0]));
 
-                        AssignmentDAO assignDao = new AssignmentDAO();
-                        // 3. Insert into session_assignments table
+                // 3. Design the Dialog Layout
+                JPanel panel = new JPanel(new GridLayout(0, 1, 5, 5));
+                panel.add(new JLabel("Assign Evaluator for Submission #" + subId));
+                panel.add(evaluatorBox);
+                panel.add(new JLabel("Assign to Session:"));
+                panel.add(sessionBox);
+
+                int result = JOptionPane.showConfirmDialog(CoordinatorPanel.this, panel, 
+                    "Assign Presentation", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+
+                if (result == JOptionPane.OK_OPTION) {
+                    String selectedSess = (String) sessionBox.getSelectedItem();
+                    String selected = (String) evaluatorBox.getSelectedItem();
+                    
+                    int evalId = Integer.parseInt(selected.split(" - ")[0]);
+                    int sessId = new SessionDAO().getSessionIdByName(selectedSess);
+
+                    if (evalId != -1 && sessId != -1) {
+                        // Save the link in the session_assignments table
                         if (assignDao.assignToEvaluator(sessId, subId, evalId)) {
-                            // 4. Update submission status to 'ASSIGNED'
+                            // Update the UI status to 'ASSIGNED'
                             new SubmissionDAO().updateSubmissionStatus(subId, "ASSIGNED");
-                            JOptionPane.showMessageDialog(CoordinatorPanel.this, "Successfully Assigned!");
-                            loadSubmissionsFromDB(); // Refresh table view
+                            JOptionPane.showMessageDialog(CoordinatorPanel.this, "Assigned successfully!");
+                            loadSubmissionsFromDB(); 
                         }
-                    } catch (NumberFormatException ex) {
-                        JOptionPane.showMessageDialog(CoordinatorPanel.this, "Error: Use numeric IDs.");
+                    } else {
+                        JOptionPane.showMessageDialog(CoordinatorPanel.this, "Error: Could not retrieve database IDs.");
                     }
                 }
             }
