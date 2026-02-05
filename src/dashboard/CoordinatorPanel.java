@@ -11,6 +11,7 @@ import javax.swing.border.*;
 import javax.swing.table.*;
 
 public class CoordinatorPanel extends JPanel {
+    private JPanel awardsCardsPanel;
     private MainFrame mainFrame;
     private JTable sessionsTable, submissionsTable, awardsTable;
     private DefaultTableModel sessionsTableModel, submissionsTableModel, awardsTableModel;
@@ -294,17 +295,17 @@ public class CoordinatorPanel extends JPanel {
         title.setFont(new Font("Segoe UI", Font.BOLD, 18));
         title.setForeground(new Color(52, 73, 94));
         
-        JPanel filterPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 10));
-        filterPanel.setOpaque(false);
-        filterPanel.add(new JLabel("Filter by:"));
-        filterPanel.add(new JComboBox<>(new String[]{"All", "Pending", "Approved", "Rejected"}));
-        filterPanel.add(createActionButton("Apply Filter", new Color(52, 152, 219)));
+        // JPanel filterPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 10));
+        // filterPanel.setOpaque(false);
+        // filterPanel.add(new JLabel("Filter by:"));
+        // filterPanel.add(new JComboBox<>(new String[]{"All", "Pending", "Approved", "Rejected"}));
+        // filterPanel.add(createActionButton("Apply Filter", new Color(52, 152, 219)));
         
-        JPanel northPanel = new JPanel(new BorderLayout());
-        northPanel.setOpaque(false);
-        northPanel.add(title, BorderLayout.WEST);
-        northPanel.add(filterPanel, BorderLayout.EAST);
-        panel.add(northPanel, BorderLayout.NORTH);
+        // JPanel northPanel = new JPanel(new BorderLayout());
+        // northPanel.setOpaque(false);
+        // northPanel.add(title, BorderLayout.WEST);
+        // northPanel.add(filterPanel, BorderLayout.EAST);
+        // panel.add(northPanel, BorderLayout.NORTH);
         
         // INTEGRATED DATABASE DATA
         String[] columnNames = {"ID", "Student", "Title", "Type", "Supervisor", "Status", "Action"};
@@ -469,15 +470,29 @@ public class CoordinatorPanel extends JPanel {
             awardsTableModel.addRow(row);
         }
         
-        // 2. Update the Trophy Cards at the top
         String oralWinner = dao.getWinner("Oral");
         String posterWinner = dao.getWinner("Poster");
         
-        // We need to re-add the cards to the panel to refresh them
-        // Or simpler: update the labels if you made them class variables.
-        // For now, let's just trigger a repaint after data is set.
         revalidate();
         repaint();
+    }
+
+    private void updateAwardCards() {
+        ReportDAO dao = new ReportDAO();
+        
+        String oralWinner = dao.getFinalizedWinner("BEST_ORAL");
+        String posterWinner = dao.getFinalizedWinner("BEST_POSTER");
+        
+        if (awardsCardsPanel != null) {
+            awardsCardsPanel.removeAll();
+            
+            awardsCardsPanel.add(createAwardCard("🏆 Best Oral", "Top Oral Presentation", new Color(255, 193, 7), oralWinner));
+            awardsCardsPanel.add(createAwardCard("📊 Best Poster", "Top Poster Presentation", new Color(33, 150, 243), posterWinner));
+            awardsCardsPanel.add(createAwardCard("👥 People's Choice", "Attendee Vote", new Color(156, 39, 176), "Open"));
+            
+            awardsCardsPanel.revalidate();
+            awardsCardsPanel.repaint();
+        }
     }
 
     private JPanel createAwardsPanel() {
@@ -489,10 +504,10 @@ public class CoordinatorPanel extends JPanel {
         title.setFont(new Font("Segoe UI", Font.BOLD, 18));
         
         // Top Section: Visual Cards
-        JPanel awardsCardsPanel = new JPanel(new GridLayout(1, 3, 15, 15));
+        awardsCardsPanel = new JPanel(new GridLayout(1, 3, 15, 15));
         awardsCardsPanel.setBackground(Color.WHITE);
-        awardsCardsPanel.add(createAwardCard("🏆 Best Oral", "Top Oral Presentation", new Color(255, 193, 7), "John Doe (9.2/10)"));
-        awardsCardsPanel.add(createAwardCard("📊 Best Poster", "Top Poster Presentation", new Color(33, 150, 243), "Jane Smith (9.5/10)"));
+        awardsCardsPanel.add(createAwardCard("🏆 Best Oral", "Top Oral Presentation", new Color(255, 193, 7), "TBD"));
+        awardsCardsPanel.add(createAwardCard("📊 Best Poster", "Top Poster Presentation", new Color(33, 150, 243), "TBD"));
         awardsCardsPanel.add(createAwardCard("👥 People's Choice", "Attendee Vote", new Color(156, 39, 176), "Open"));
         
         // Middle Section: Table of all results (Best for PDF Generation)
@@ -528,6 +543,11 @@ public class CoordinatorPanel extends JPanel {
                 } else {
                     JOptionPane.showMessageDialog(this, "Error: Could not save awards. Check if winners exist.");
                 }
+            }
+
+            if (new ReportDAO().finalizeAwards()) {
+                JOptionPane.showMessageDialog(this, "Awards finalized!");
+                updateAwardCards(); 
             }
         });
 
