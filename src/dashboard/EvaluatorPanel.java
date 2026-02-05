@@ -2,7 +2,9 @@ package dashboard;
 
 import dao.EvaluationDAO;
 import dao.SubmissionDAO;
+import database.SQLiteConnection;
 import java.awt.*;
+import java.sql.*;
 import java.util.List;
 import javax.swing.*;
 import javax.swing.border.*;
@@ -12,14 +14,18 @@ public class EvaluatorPanel extends JPanel {
     private MainFrame mainFrame;
     private JTable assignmentsTable, completedTable;
     private DefaultTableModel assignmentsTableModel, completedTableModel;
-    // We will use assignmentsTableModel instead of the generic tableModel variable
     private int currentSubmissionId = -1; 
-    private int currentEvaluatorId; 
+    private int currentEvaluatorId;
+    
+    // Form components
+    private JLabel presenterLabel, titleLabel, typeLabel, sessionLabel;
+    private JSpinner claritySpinner, methodSpinner, resultsSpinner, presSpinner;
+    private JTextField clarityComment, methodComment, resultsComment, presComment;
+    private JTextArea overallComment;
 
     public void setEvaluatorId(int id) {
         this.currentEvaluatorId = id;
     }
-    
     
     public EvaluatorPanel(MainFrame mainFrame) {
         this.mainFrame = mainFrame;
@@ -39,9 +45,13 @@ public class EvaluatorPanel extends JPanel {
         
         add(tabbedPane, BorderLayout.CENTER);
         add(createFooterPanel(), BorderLayout.SOUTH);
-
-        // Fetch data from database immediately
-        loadAssignments();
+        
+        // Add tab change listener
+        tabbedPane.addChangeListener(e -> {
+            if (tabbedPane.getSelectedIndex() == 3) { // Completed tab
+                loadCompletedEvaluations();
+            }
+        });
     }
 
     public void loadAssignments() {
@@ -49,12 +59,10 @@ public class EvaluatorPanel extends JPanel {
             assignmentsTableModel.setRowCount(0); 
 
             SubmissionDAO dao = new SubmissionDAO();
-            // Now using the dynamic ID passed from the login process
             List<Object[]> assignments = dao.getAssignmentsForEvaluator(currentEvaluatorId);
 
             if (assignments.isEmpty()) {
-                // Optional: Add a placeholder if nothing is assigned to THIS evaluator
-                assignmentsTableModel.addRow(new Object[]{"", "No assignments found", "", "", ""});
+                assignmentsTableModel.addRow(new Object[]{"", "No assignments found", "", "", "No Action"});
             } else {
                 for (Object[] row : assignments) {
                     assignmentsTableModel.addRow(row);
@@ -63,39 +71,166 @@ public class EvaluatorPanel extends JPanel {
         }
     }
     
+    private void loadCompletedEvaluations() {
+        if (completedTableModel != null) {
+            completedTableModel.setRowCount(0);
+            
+            String sql = """
+                SELECT e.submission_id, s.research_title, s.presentation_type, 
+                       e.overall_score, e.evaluation_date
+                FROM evaluations e
+                JOIN submissions s ON e.submission_id = s.id
+                WHERE e.evaluator_id = ?
+                ORDER BY e.evaluation_date DESC
+                """;
+                
+            try (Connection conn = SQLiteConnection.connect();
+                 PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                pstmt.setInt(1, currentEvaluatorId);
+                ResultSet rs = pstmt.executeQuery();
+                
+                while (rs.next()) {
+                    completedTableModel.addRow(new Object[]{
+                        rs.getInt("submission_id"),
+                        rs.getString("research_title"),
+                        rs.getString("presentation_type"),
+                        String.format("%.2f", rs.getDouble("overall_score")),
+                        rs.getString("evaluation_date"),
+                        "View Details"
+                    });
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+    
+    private void updateEvaluationForm(int submissionId) {
+        if (submissionId == -1) {
+            presenterLabel.setText("Select a submission first");
+            titleLabel.setText("No submission selected");
+            typeLabel.setText("N/A");
+            sessionLabel.setText("N/A");
+            return;
+        }
+        
+        String sql = """
+            SELECT u.username, s.research_title, s.presentation_type, 
+                   ses.name as session_name
+            FROM submissions s
+            JOIN users u ON s.student_id = u.id
+            LEFT JOIN session_assignments sa ON s.id = sa.submission_id
+            LEFT JOIN sessions ses ON sa.session_id = ses.id
+            WHERE s.id = ?
+            """;
+            
+        try (Connection conn = SQLiteConnection.connect();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, submissionId);
+            ResultSet rs = pstmt.executeQuery();
+            
+            if (rs.next()) {
+                presenterLabel.setText(rs.getString("username"));
+                titleLabel.setText(rs.getString("research_title"));
+                typeLabel.setText(rs.getString("presentation_type"));
+                String sessionName = rs.getString("session_name");
+                sessionLabel.setText(sessionName != null ? sessionName : "Not assigned to session");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+    
     private JPanel createAssignmentsPanel() {
         JPanel panel = new JPanel(new BorderLayout(15, 15));
         panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
         panel.setBackground(Color.WHITE);
         
-        JLabel title = new JLabel("Assigned Evaluations");
+        JLabel title = new JLabel("Assigned Presentations");
         title.setFont(new Font("Segoe UI", Font.BOLD, 18));
         
-        // Initialize the model here
         String[] columnNames = {"ID", "Title", "Type", "Status", "Action"};
-        assignmentsTableModel = new DefaultTableModel(columnNames, 0);
+        assignmentsTableModel = new DefaultTableModel(columnNames, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return column == 4; // Only Action column is editable
+            }
+        };
         
         assignmentsTable = new JTable(assignmentsTableModel);
         assignmentsTable.setRowHeight(35);
         
-        // Selection Listener to update currentSubmissionId
+        // Custom renderer and editor for Action column
+        assignmentsTable.getColumnModel().getColumn(4).setCellRenderer(new ButtonRenderer("Evaluate"));
+        assignmentsTable.getColumnModel().getColumn(4).setCellEditor(new ButtonEditor(new JCheckBox(), "Evaluate"));
+        
         assignmentsTable.getSelectionModel().addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) {
                 int row = assignmentsTable.getSelectedRow();
                 if (row != -1) {
-                    currentSubmissionId = (int) assignmentsTable.getValueAt(row, 0);
+                    Object idValue = assignmentsTableModel.getValueAt(row, 0);
+                    if (idValue instanceof Integer) {
+                        currentSubmissionId = (int) idValue;
+                    } else if (idValue instanceof String && !((String) idValue).isEmpty()) {
+                        try {
+                            currentSubmissionId = Integer.parseInt((String) idValue);
+                        } catch (NumberFormatException ex) {
+                            currentSubmissionId = -1;
+                        }
+                    }
                 }
             }
         });
-
+        
         panel.add(title, BorderLayout.NORTH);
         panel.add(new JScrollPane(assignmentsTable), BorderLayout.CENTER);
+        
+        JButton refreshBtn = new JButton("Refresh Assignments");
+        refreshBtn.addActionListener(e -> loadAssignments());
+        panel.add(refreshBtn, BorderLayout.SOUTH);
         
         return panel;
     }
     
     private JPanel createCompletedPanel() {
-        return createCompletedEvaluationsPanel();
+        JPanel panel = new JPanel(new BorderLayout(15, 15));
+        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        panel.setBackground(Color.WHITE);
+        
+        JLabel title = new JLabel("Completed Evaluations");
+        title.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        title.setForeground(new Color(52, 73, 94));
+        
+        String[] columnNames = {"ID", "Title", "Type", "Score", "Date", "Action"};
+        completedTableModel = new DefaultTableModel(columnNames, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return column == 5; // Only Action column is editable
+            }
+        };
+        
+        completedTable = new JTable(completedTableModel);
+        completedTable.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        completedTable.setRowHeight(35);
+        completedTable.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 12));
+        completedTable.getTableHeader().setBackground(new Color(22, 160, 133));
+        completedTable.getTableHeader().setForeground(Color.WHITE);
+        
+        // Custom renderer and editor for Action column
+        completedTable.getColumnModel().getColumn(5).setCellRenderer(new ButtonRenderer("View"));
+        completedTable.getColumnModel().getColumn(5).setCellEditor(new ButtonEditor(new JCheckBox(), "View"));
+        
+        JScrollPane scrollPane = new JScrollPane(completedTable);
+        scrollPane.setBorder(new LineBorder(new Color(220, 220, 220), 1));
+        
+        panel.add(title, BorderLayout.NORTH);
+        panel.add(scrollPane, BorderLayout.CENTER);
+        
+        JButton refreshBtn = new JButton("Refresh Completed");
+        refreshBtn.addActionListener(e -> loadCompletedEvaluations());
+        panel.add(refreshBtn, BorderLayout.SOUTH);
+        
+        return panel;
     }
     
     private JPanel createEvaluationFormPanel() {
@@ -120,50 +255,56 @@ public class EvaluatorPanel extends JPanel {
         infoPanel.setBackground(new Color(248, 249, 250));
         
         infoPanel.add(new JLabel("Presenter:"));
-        infoPanel.add(new JLabel("John Doe"));
+        presenterLabel = new JLabel("Select a submission from Assigned tab");
+        infoPanel.add(presenterLabel);
+        
         infoPanel.add(new JLabel("Title:"));
-        infoPanel.add(new JLabel("AI in Healthcare: A Comprehensive Review"));
+        titleLabel = new JLabel("No submission selected");
+        infoPanel.add(titleLabel);
+        
         infoPanel.add(new JLabel("Type:"));
-        infoPanel.add(new JLabel("Oral Presentation"));
+        typeLabel = new JLabel("N/A");
+        infoPanel.add(typeLabel);
+        
         infoPanel.add(new JLabel("Session:"));
-        infoPanel.add(new JLabel("SES-002: Oral Session A (10:30-10:45)"));
+        sessionLabel = new JLabel("N/A");
+        infoPanel.add(sessionLabel);
         
         // Rubric scoring panel
         JPanel rubricPanel = new JPanel(new GridLayout(5, 3, 10, 10));
         rubricPanel.setBorder(new TitledBorder("Evaluation Rubric (Score 1-10)"));
         rubricPanel.setBackground(new Color(248, 249, 250));
         
-        // Headers
         rubricPanel.add(new JLabel("Criterion"));
         rubricPanel.add(new JLabel("Score (1-10)"));
         rubricPanel.add(new JLabel("Comments"));
         
         // Problem Clarity
         rubricPanel.add(new JLabel("Problem Clarity"));
-        JSpinner claritySpinner = new JSpinner(new SpinnerNumberModel(7, 1, 10, 1));
+        claritySpinner = new JSpinner(new SpinnerNumberModel(7, 1, 10, 1));
         rubricPanel.add(claritySpinner);
-        JTextField clarityComment = new JTextField();
+        clarityComment = new JTextField();
         rubricPanel.add(clarityComment);
         
         // Methodology
         rubricPanel.add(new JLabel("Methodology"));
-        JSpinner methodSpinner = new JSpinner(new SpinnerNumberModel(8, 1, 10, 1));
+        methodSpinner = new JSpinner(new SpinnerNumberModel(8, 1, 10, 1));
         rubricPanel.add(methodSpinner);
-        JTextField methodComment = new JTextField();
+        methodComment = new JTextField();
         rubricPanel.add(methodComment);
         
         // Results
         rubricPanel.add(new JLabel("Results"));
-        JSpinner resultsSpinner = new JSpinner(new SpinnerNumberModel(7, 1, 10, 1));
+        resultsSpinner = new JSpinner(new SpinnerNumberModel(7, 1, 10, 1));
         rubricPanel.add(resultsSpinner);
-        JTextField resultsComment = new JTextField();
+        resultsComment = new JTextField();
         rubricPanel.add(resultsComment);
         
         // Presentation
         rubricPanel.add(new JLabel("Presentation Quality"));
-        JSpinner presSpinner = new JSpinner(new SpinnerNumberModel(9, 1, 10, 1));
+        presSpinner = new JSpinner(new SpinnerNumberModel(9, 1, 10, 1));
         rubricPanel.add(presSpinner);
-        JTextField presComment = new JTextField();
+        presComment = new JTextField();
         rubricPanel.add(presComment);
         
         // Overall comments
@@ -171,20 +312,11 @@ public class EvaluatorPanel extends JPanel {
         overallPanel.setBorder(new TitledBorder("Overall Comments"));
         overallPanel.setBackground(new Color(248, 249, 250));
         
-        JTextArea overallComment = new JTextArea(4, 50);
+        overallComment = new JTextArea(4, 50);
         overallComment.setLineWrap(true);
         overallComment.setWrapStyleWord(true);
         JScrollPane commentScroll = new JScrollPane(overallComment);
         overallPanel.add(commentScroll, BorderLayout.CENTER);
-        
-        // Calculate total
-        JPanel totalPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        totalPanel.setBackground(new Color(248, 249, 250));
-        totalPanel.add(new JLabel("Total Score: "));
-        JLabel totalLabel = new JLabel("31/40 (7.75/10)");
-        totalLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        totalLabel.setForeground(new Color(46, 204, 113));
-        totalPanel.add(totalLabel);
         
         // Submit button
         JButton submitBtn = createActionButton("Submit Evaluation", new Color(46, 204, 113));
@@ -192,7 +324,7 @@ public class EvaluatorPanel extends JPanel {
 
         submitBtn.addActionListener(e -> {
             if (currentSubmissionId == -1) {
-                JOptionPane.showMessageDialog(this, "Please select a submission first!");
+                JOptionPane.showMessageDialog(this, "Please select a submission first from the 'Assigned Presentations' tab!");
                 return;
             }
 
@@ -203,9 +335,31 @@ public class EvaluatorPanel extends JPanel {
             String comment = overallComment.getText();
 
             EvaluationDAO evalDao = new EvaluationDAO();
-            if (evalDao.submitEvaluation(currentSubmissionId, currentEvaluatorId, clarity, method, res, quality, comment)) {
-                JOptionPane.showMessageDialog(this, "Evaluation Saved!");
+            if (evalDao.submitEvaluation(currentSubmissionId, currentEvaluatorId, 
+                                         clarity, method, res, quality, comment)) {
+                JOptionPane.showMessageDialog(this, "Evaluation Saved Successfully!");
+                
+                // Update submission status
                 new SubmissionDAO().updateSubmissionStatus(currentSubmissionId, "COMPLETED");
+                
+                // Refresh tables
+                loadAssignments();
+                loadCompletedEvaluations();
+                
+                // Reset form
+                claritySpinner.setValue(7);
+                methodSpinner.setValue(8);
+                resultsSpinner.setValue(7);
+                presSpinner.setValue(9);
+                clarityComment.setText("");
+                methodComment.setText("");
+                resultsComment.setText("");
+                presComment.setText("");
+                overallComment.setText("");
+                currentSubmissionId = -1;
+                updateEvaluationForm(-1);
+            } else {
+                JOptionPane.showMessageDialog(this, "Failed to save evaluation!");
             }
         });
         
@@ -220,7 +374,6 @@ public class EvaluatorPanel extends JPanel {
         
         panel.add(title, BorderLayout.NORTH);
         panel.add(formPanel, BorderLayout.CENTER);
-        panel.add(totalPanel, BorderLayout.SOUTH);
         panel.add(buttonPanel, BorderLayout.SOUTH);
         
         return panel;
@@ -231,7 +384,6 @@ public class EvaluatorPanel extends JPanel {
         headerPanel.setBackground(new Color(22, 160, 133));
         headerPanel.setBorder(BorderFactory.createEmptyBorder(12, 20, 12, 20));
         
-        // Left side: Title and welcome message
         JPanel leftPanel = new JPanel(new GridLayout(2, 1));
         leftPanel.setOpaque(false);
         
@@ -246,7 +398,6 @@ public class EvaluatorPanel extends JPanel {
         leftPanel.add(title);
         leftPanel.add(subtitle);
         
-        // Right side: Logout button (MATCHING COORDINATOR STYLE)
         JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
         rightPanel.setOpaque(false);
         
@@ -262,26 +413,15 @@ public class EvaluatorPanel extends JPanel {
         logoutBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
         logoutBtn.setPreferredSize(new Dimension(120, 45));
         
-        // Add hover effects
         logoutBtn.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseEntered(java.awt.event.MouseEvent evt) {
                 logoutBtn.setBackground(new Color(192, 57, 43));
-                logoutBtn.setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createLineBorder(new Color(169, 50, 38), 2),
-                    BorderFactory.createEmptyBorder(10, 25, 10, 25)
-                ));
             }
-            
             public void mouseExited(java.awt.event.MouseEvent evt) {
                 logoutBtn.setBackground(new Color(231, 76, 60));
-                logoutBtn.setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createLineBorder(new Color(192, 57, 43), 2),
-                    BorderFactory.createEmptyBorder(10, 25, 10, 25)
-                ));
             }
         });
         
-        // Logout action with confirmation
         logoutBtn.addActionListener(e -> {
             int confirm = JOptionPane.showConfirmDialog(
                 EvaluatorPanel.this,
@@ -303,176 +443,6 @@ public class EvaluatorPanel extends JPanel {
         return headerPanel;
     }
     
-    private JPanel createDashboardPanel() {
-        JPanel panel = new JPanel(new BorderLayout(15, 15));
-        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
-        panel.setBackground(Color.WHITE);
-        
-        // Welcome Card
-        JPanel welcomeCard = new JPanel(new BorderLayout(10, 10));
-        welcomeCard.setBackground(new Color(22, 160, 133));
-        welcomeCard.setBorder(new CompoundBorder(
-            new LineBorder(new Color(20, 143, 119), 2),
-            BorderFactory.createEmptyBorder(20, 20, 20, 20)
-        ));
-        
-        JLabel welcomeTitle = new JLabel("Welcome, Evaluator");
-        welcomeTitle.setFont(new Font("Segoe UI", Font.BOLD, 20));
-        welcomeTitle.setForeground(Color.WHITE);
-        
-        JTextArea welcomeMessage = new JTextArea("As an evaluator, your role is crucial in maintaining the quality of presentations. Please review assigned submissions, provide fair evaluations, and submit scores before deadlines.");
-        welcomeMessage.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        welcomeMessage.setForeground(Color.WHITE);
-        welcomeMessage.setEditable(false);
-        welcomeMessage.setLineWrap(true);
-        welcomeMessage.setWrapStyleWord(true);
-        welcomeMessage.setOpaque(false);
-        
-        welcomeCard.add(welcomeTitle, BorderLayout.NORTH);
-        welcomeCard.add(welcomeMessage, BorderLayout.CENTER);
-        
-        panel.add(welcomeCard, BorderLayout.NORTH);
-        
-        // Evaluation Stats
-        JPanel statsPanel = new JPanel(new GridLayout(2, 3, 15, 15));
-        statsPanel.setBorder(BorderFactory.createEmptyBorder(20, 0, 0, 0));
-        statsPanel.setBackground(Color.WHITE);
-        
-        statsPanel.add(createEvalStatCard("Pending Evaluations", "8", new Color(230, 126, 34)));
-        statsPanel.add(createEvalStatCard("Completed", "15", new Color(46, 204, 113)));
-        statsPanel.add(createEvalStatCard("Average Score", "7.8/10", new Color(52, 152, 219)));
-        statsPanel.add(createEvalStatCard("Oral Presentations", "10", new Color(155, 89, 182)));
-        statsPanel.add(createEvalStatCard("Poster Presentations", "13", new Color(22, 160, 133)));
-        statsPanel.add(createEvalStatCard("Next Deadline", "3 days", new Color(231, 76, 60)));
-        
-        panel.add(statsPanel, BorderLayout.CENTER);
-        
-        return panel;
-    }
-    
-    private JPanel createEvaluationTasksPanel() {
-        JPanel panel = new JPanel(new BorderLayout(15, 15));
-        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
-        panel.setBackground(Color.WHITE);
-        
-        // Header
-        JPanel headerPanel = new JPanel(new BorderLayout());
-        headerPanel.setOpaque(false);
-        
-        JLabel title = new JLabel("Assigned Evaluations");
-        title.setFont(new Font("Segoe UI", Font.BOLD, 18));
-        title.setForeground(new Color(52, 73, 94));
-        
-        JLabel subtitle = new JLabel("Please complete evaluations before the deadline");
-        subtitle.setFont(new Font("Segoe UI", Font.ITALIC, 12));
-        subtitle.setForeground(new Color(100, 100, 100));
-        
-        JPanel northPanel = new JPanel(new BorderLayout());
-        northPanel.setOpaque(false);
-        northPanel.add(title, BorderLayout.WEST);
-        northPanel.add(subtitle, BorderLayout.EAST);
-        
-        panel.add(northPanel, BorderLayout.NORTH);
-        
-        // Assignments Table
-        String[] columnNames = {"ID", "Student", "Title", "Type", "Session", "Deadline", "Status", "Action"};
-        assignmentsTableModel = new DefaultTableModel(columnNames, 0);
-        
-        // Add sample data
-        Object[][] sampleData = {
-            {101, "John Doe", "AI in Healthcare", "Oral", "SES-002", "2024-05-10", "Pending", "Evaluate"},
-            {102, "Jane Smith", "Quantum Computing", "Poster", "SES-003", "2024-05-10", "Pending", "Evaluate"},
-            {103, "Bob Wilson", "Renewable Energy", "Oral", "SES-002", "2024-05-11", "In Progress", "Continue"},
-            {104, "Alice Brown", "Climate Change", "Poster", "SES-003", "2024-05-12", "Pending", "Evaluate"},
-            {105, "Charlie Lee", "Space Exploration", "Oral", "SES-005", "2024-05-13", "Pending", "Evaluate"}
-        };
-        
-        for (Object[] row : sampleData) {
-            assignmentsTableModel.addRow(row);
-        }
-        
-        assignmentsTable = new JTable(assignmentsTableModel);
-        assignmentsTable.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        assignmentsTable.setRowHeight(35);
-        assignmentsTable.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 12));
-        assignmentsTable.getTableHeader().setBackground(new Color(22, 160, 133));
-        assignmentsTable.getTableHeader().setForeground(Color.WHITE);
-        
-        // Custom renderer for status column
-        assignmentsTable.getColumnModel().getColumn(6).setCellRenderer(new StatusCellRenderer());
-        
-        JScrollPane scrollPane = new JScrollPane(assignmentsTable);
-        scrollPane.setBorder(new LineBorder(new Color(220, 220, 220), 1));
-        
-        panel.add(scrollPane, BorderLayout.CENTER);
-        
-        // Instructions
-        JPanel instructionsPanel = new JPanel(new BorderLayout());
-        instructionsPanel.setBorder(new TitledBorder(
-            BorderFactory.createLineBorder(new Color(220, 220, 220), 1),
-            "Evaluation Guidelines",
-            TitledBorder.LEFT,
-            TitledBorder.TOP,
-            new Font("Segoe UI", Font.BOLD, 12),
-            new Color(22, 160, 133)
-        ));
-        instructionsPanel.setBackground(new Color(248, 249, 250));
-        
-        JTextArea guidelines = new JTextArea("• Score each criterion from 1-10\n• Provide constructive comments\n• Submit evaluation within 48 hours of assignment\n• Contact coordinator for any questions\n• Use the rubric as reference for scoring");
-        guidelines.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        guidelines.setForeground(new Color(100, 100, 100));
-        guidelines.setEditable(false);
-        guidelines.setOpaque(false);
-        
-        instructionsPanel.add(guidelines, BorderLayout.CENTER);
-        
-        panel.add(instructionsPanel, BorderLayout.SOUTH);
-        
-        return panel;
-    }
-    
-    private JPanel createCompletedEvaluationsPanel() {
-        JPanel panel = new JPanel(new BorderLayout(15, 15));
-        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
-        panel.setBackground(Color.WHITE);
-        
-        JLabel title = new JLabel("Completed Evaluations");
-        title.setFont(new Font("Segoe UI", Font.BOLD, 18));
-        title.setForeground(new Color(52, 73, 94));
-        
-        // Completed Evaluations Table
-        String[] columnNames = {"ID", "Student", "Title", "Type", "Score", "Date Completed", "View"};
-        completedTableModel = new DefaultTableModel(columnNames, 0);
-        
-        // Add sample data
-        Object[][] sampleData = {
-            {201, "David Chen", "Machine Learning", "Oral", "9.2/10", "2024-05-05", "View"},
-            {202, "Emma Wilson", "Biotechnology", "Poster", "8.5/10", "2024-05-06", "View"},
-            {203, "Frank Miller", "Data Privacy", "Oral", "7.8/10", "2024-05-07", "View"},
-            {204, "Grace Lee", "Robotics", "Poster", "8.9/10", "2024-05-08", "View"},
-            {205, "Henry Brown", "Cybersecurity", "Oral", "8.1/10", "2024-05-09", "View"}
-        };
-        
-        for (Object[] row : sampleData) {
-            completedTableModel.addRow(row);
-        }
-        
-        completedTable = new JTable(completedTableModel);
-        completedTable.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        completedTable.setRowHeight(35);
-        completedTable.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 12));
-        completedTable.getTableHeader().setBackground(new Color(22, 160, 133));
-        completedTable.getTableHeader().setForeground(Color.WHITE);
-        
-        JScrollPane scrollPane = new JScrollPane(completedTable);
-        scrollPane.setBorder(new LineBorder(new Color(220, 220, 220), 1));
-        
-        panel.add(title, BorderLayout.NORTH);
-        panel.add(scrollPane, BorderLayout.CENTER);
-        
-        return panel;
-    }
-    
     private JPanel createRubricPanel() {
         JPanel panel = new JPanel(new BorderLayout(15, 15));
         panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
@@ -482,7 +452,6 @@ public class EvaluatorPanel extends JPanel {
         title.setFont(new Font("Segoe UI", Font.BOLD, 18));
         title.setForeground(new Color(52, 73, 94));
         
-        // Rubric Table
         String[] columnNames = {"Criterion", "Excellent (9-10)", "Good (7-8)", "Average (5-6)", "Poor (1-4)"};
         Object[][] rubricData = {
             {"Problem Clarity", "Clear research question, well-defined problem", "Problem defined but could be clearer", "Problem statement vague", "No clear problem statement"},
@@ -499,7 +468,6 @@ public class EvaluatorPanel extends JPanel {
         rubricTable.getTableHeader().setBackground(new Color(22, 160, 133));
         rubricTable.getTableHeader().setForeground(Color.WHITE);
         
-        // Center align all cells
         DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer();
         centerRenderer.setHorizontalAlignment(JLabel.CENTER);
         for (int i = 0; i < rubricTable.getColumnCount(); i++) {
@@ -509,7 +477,6 @@ public class EvaluatorPanel extends JPanel {
         JScrollPane scrollPane = new JScrollPane(rubricTable);
         scrollPane.setBorder(new LineBorder(new Color(220, 220, 220), 1));
         
-        // Scoring Guidelines
         JPanel guidelinesPanel = new JPanel(new BorderLayout(10, 10));
         guidelinesPanel.setBorder(new TitledBorder(
             BorderFactory.createLineBorder(new Color(220, 220, 220), 1),
@@ -552,36 +519,13 @@ public class EvaluatorPanel extends JPanel {
         return panel;
     }
     
-    private JPanel createEvalStatCard(String title, String value, Color color) {
-        JPanel card = new JPanel(new BorderLayout(5, 5));
-        card.setBackground(Color.WHITE);
-        card.setBorder(new CompoundBorder(
-            new LineBorder(new Color(220, 220, 220), 1),
-            BorderFactory.createEmptyBorder(15, 15, 15, 15)
-        ));
-        
-        JLabel titleLabel = new JLabel(title);
-        titleLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        titleLabel.setForeground(new Color(100, 100, 100));
-        
-        JLabel valueLabel = new JLabel(value);
-        valueLabel.setFont(new Font("Segoe UI", Font.BOLD, 24));
-        valueLabel.setForeground(color);
-        valueLabel.setHorizontalAlignment(SwingConstants.CENTER);
-        
-        card.add(titleLabel, BorderLayout.NORTH);
-        card.add(valueLabel, BorderLayout.CENTER);
-        
-        return card;
-    }
-    
     private JPanel createFooterPanel() {
         JPanel footer = new JPanel(new BorderLayout());
         footer.setBackground(new Color(22, 160, 133));
         footer.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
         
         JLabel footerText = new JLabel(
-            "© 2024 Seminar Management System - Evaluator Module v1.0 | Evaluator: Dr. Smith | Department: Computer Science",
+            "© 2024 Seminar Management System - Evaluator Module v1.0",
             SwingConstants.CENTER
         );
         footerText.setFont(new Font("Segoe UI", Font.PLAIN, 12));
@@ -602,7 +546,128 @@ public class EvaluatorPanel extends JPanel {
         return button;
     }
     
-    // Rounded Border class
+    // Inner classes for table buttons
+    class ButtonRenderer extends JButton implements TableCellRenderer {
+        private String buttonText;
+        
+        public ButtonRenderer(String text) {
+            buttonText = text;
+            setOpaque(true);
+        }
+        
+        public Component getTableCellRendererComponent(JTable table, Object value,
+                boolean isSelected, boolean hasFocus, int row, int column) {
+            setText(buttonText);
+            setBackground(new Color(52, 152, 219));
+            setForeground(Color.WHITE);
+            setFont(new Font("Segoe UI", Font.BOLD, 12));
+            setBorder(new RoundedBorder(4));
+            return this;
+        }
+    }
+    
+    class ButtonEditor extends DefaultCellEditor {
+        private JButton button;
+        private String buttonText;
+        private boolean isPushed;
+        
+        public ButtonEditor(JCheckBox checkBox, String text) {
+            super(checkBox);
+            buttonText = text;
+            button = new JButton();
+            button.setOpaque(true);
+            button.addActionListener(e -> fireEditingStopped());
+        }
+        
+        public Component getTableCellEditorComponent(JTable table, Object value,
+                boolean isSelected, int row, int column) {
+            button.setText(buttonText);
+            isPushed = true;
+            return button;
+        }
+        
+        public Object getCellEditorValue() {
+            if (isPushed) {
+                JTable sourceTable = (button.getParent() instanceof JTable) ? 
+                    (JTable) button.getParent() : null;
+                    
+                if (sourceTable != null) {
+                    int row = sourceTable.getSelectedRow();
+                    if (row != -1) {
+                        if (buttonText.equals("Evaluate")) {
+                            // Get submission ID and update currentSubmissionId
+                            Object idValue = sourceTable.getValueAt(row, 0);
+                            if (idValue instanceof Integer) {
+                                currentSubmissionId = (int) idValue;
+                            } else if (idValue instanceof String && !((String) idValue).isEmpty()) {
+                                try {
+                                    currentSubmissionId = Integer.parseInt((String) idValue);
+                                } catch (NumberFormatException ex) {
+                                    currentSubmissionId = -1;
+                                }
+                            }
+                            // Update evaluation form with submission details
+                            updateEvaluationForm(currentSubmissionId);
+                            // Switch to evaluation tab
+                            ((JTabbedPane)getParent().getParent().getParent()).setSelectedIndex(1);
+                        } else if (buttonText.equals("View")) {
+                            // Show evaluation details
+                            int submissionId = (int) sourceTable.getValueAt(row, 0);
+                            showEvaluationDetails(submissionId);
+                        }
+                    }
+                }
+            }
+            isPushed = false;
+            return buttonText;
+        }
+        
+        private void showEvaluationDetails(int submissionId) {
+            String sql = """
+                SELECT e.problem_clarity, e.methodology, e.results, 
+                       e.presentation_quality, e.overall_score, e.comments,
+                       s.research_title, u.username, e.evaluation_date
+                FROM evaluations e
+                JOIN submissions s ON e.submission_id = s.id
+                JOIN users u ON s.student_id = u.id
+                WHERE e.submission_id = ? AND e.evaluator_id = ?
+                """;
+                
+            try (Connection conn = SQLiteConnection.connect();
+                 PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                pstmt.setInt(1, submissionId);
+                pstmt.setInt(2, currentEvaluatorId);
+                ResultSet rs = pstmt.executeQuery();
+                
+                if (rs.next()) {
+                    StringBuilder details = new StringBuilder();
+                    details.append("Evaluation Details\n");
+                    details.append("==================\n\n");
+                    details.append("Title: ").append(rs.getString("research_title")).append("\n");
+                    details.append("Student: ").append(rs.getString("username")).append("\n");
+                    details.append("Date: ").append(rs.getString("evaluation_date")).append("\n\n");
+                    details.append("Scores:\n");
+                    details.append("• Problem Clarity: ").append(rs.getInt("problem_clarity")).append("/10\n");
+                    details.append("• Methodology: ").append(rs.getInt("methodology")).append("/10\n");
+                    details.append("• Results: ").append(rs.getInt("results")).append("/10\n");
+                    details.append("• Presentation Quality: ").append(rs.getInt("presentation_quality")).append("/10\n");
+                    details.append("• Overall Score: ").append(String.format("%.2f", rs.getDouble("overall_score"))).append("/10\n\n");
+                    details.append("Comments:\n").append(rs.getString("comments"));
+                    
+                    JTextArea textArea = new JTextArea(details.toString());
+                    textArea.setEditable(false);
+                    JScrollPane scrollPane = new JScrollPane(textArea);
+                    scrollPane.setPreferredSize(new Dimension(500, 400));
+                    
+                    JOptionPane.showMessageDialog(EvaluatorPanel.this, scrollPane, 
+                        "Evaluation Details", JOptionPane.INFORMATION_MESSAGE);
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+    
     class RoundedBorder implements Border {
         private int radius;
         
@@ -622,42 +687,4 @@ public class EvaluatorPanel extends JPanel {
             g.drawRoundRect(x, y, width-1, height-1, radius, radius);
         }
     }
-    
-    // Custom cell renderer for status column
-    class StatusCellRenderer extends DefaultTableCellRenderer {
-        @Override
-        public Component getTableCellRendererComponent(JTable table, Object value,
-                boolean isSelected, boolean hasFocus, int row, int column) {
-            Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
-            JLabel label = (JLabel) c;
-            label.setHorizontalAlignment(JLabel.CENTER);
-            label.setOpaque(true);
-            
-            if (value == null) return c;
-            
-            String status = value.toString();
-            switch (status.toLowerCase()) {
-                case "pending":
-                    label.setBackground(new Color(252, 248, 227));
-                    label.setForeground(new Color(138, 109, 59));
-                    break;
-                case "in progress":
-                    label.setBackground(new Color(217, 237, 247));
-                    label.setForeground(new Color(49, 112, 143));
-                    break;
-                case "completed":
-                    label.setBackground(new Color(220, 237, 200));
-                    label.setForeground(new Color(60, 118, 61));
-                    break;
-                default:
-                    label.setBackground(Color.WHITE);
-                    label.setForeground(Color.BLACK);
-            }
-            
-            label.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
-            return label;
-        }
-    }
-
-    
 }
