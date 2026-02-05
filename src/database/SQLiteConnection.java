@@ -23,7 +23,7 @@ public class SQLiteConnection {
             );
             """;
 
-        // 2. Submissions Table (Updated CHECK to allow lowercase)
+        // 2. Submissions Table
         String createSubmissionsTable = """
             CREATE TABLE IF NOT EXISTS submissions (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -39,7 +39,7 @@ public class SQLiteConnection {
             );
             """;
 
-        // 3. Sessions Table (Updated CHECK to allow lowercase)
+        // 3. Sessions Table
         String createSessionsTable = """
             CREATE TABLE IF NOT EXISTS sessions (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -1,15 +1,14 @@
 package dao;
 
 import database.SQLiteConnection;
-import model.Coordinator;
-import model.Evaluator;
-import model.Student;
-import model.User;
-
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import model.Coordinator;
+import model.Evaluator;
+import model.Student;
+import model.User;
 
 public class UserDAO {
 
@@ -55,7 +54,7 @@ public class UserDAO {
             ResultSet rs = pstmt.executeQuery();
             
             if (rs.next()) {
-                int id = rs.getInt("id"); // Get the actual ID (e.g., 2 for abu)
+                int id = rs.getInt("id"); // Get the actual ID
                 String user = rs.getString("username");
                 String pass = rs.getString("password");
                 String role = rs.getString("roles");

@@ -30,7 +30,6 @@ public class SessionDAO {
     // For refreshing the Session Management Table
     public List<Object[]> getAllSessions() {
         List<Object[]> sessions = new ArrayList<>();
-        // Select the exact columns defined in the table above
         String sql = "SELECT id, name, date, time, type, venue, status FROM sessions";
         try (Connection conn = SQLiteConnection.connect();
             Statement stmt = conn.createStatement();
@@ -75,7 +74,7 @@ public class SessionDAO {
         String deleteSessionSql = "DELETE FROM sessions WHERE id = ?";
         
         try (Connection conn = SQLiteConnection.connect()) {
-            conn.setAutoCommit(false); // Use a transaction
+            conn.setAutoCommit(false);
             
             try (PreparedStatement pstmt1 = conn.prepareStatement(deleteAssignmentsSql);
                 PreparedStatement pstmt2 = conn.prepareStatement(deleteSessionSql)) {
@@ -101,7 +100,7 @@ public class SessionDAO {
 
     public List<Object[]> getFullSchedule() {
         List<Object[]> schedule = new ArrayList<>();
-        // Joins Sessions with Submissions to see what is happening where
+        // Joins Sessions with Submissions
         String sql = """
             SELECT s.name, s.date, s.time, s.venue, sub.research_title 
             FROM sessions s
@@ -128,7 +127,7 @@ public class SessionDAO {
 
     public List<String> getAllSessionTitles() {
         List<String> sessions = new ArrayList<>();
-        String sql = "SELECT name FROM sessions"; // 'name' matches your table column
+        String sql = "SELECT name FROM sessions";
         try (Connection conn = SQLiteConnection.connect();
             Statement stmt = conn.createStatement();
             ResultSet rs = stmt.executeQuery(sql)) {
@@ -148,12 +147,12 @@ public class SessionDAO {
             ResultSet rs = pstmt.executeQuery();
             
             if (rs.next()) {
-                return rs.getInt("id"); // Returns the numeric ID (e.g., 1 for SESB)
+                return rs.getInt("id"); // Returns id
             }
         } catch (SQLException e) {
             e.printStackTrace();
         }
-        return -1; // Return -1 if the session name is not found
+        return -1;
     }
 
     public int getTotalSessionCount() {

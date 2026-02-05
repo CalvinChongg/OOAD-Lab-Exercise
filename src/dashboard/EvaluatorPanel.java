@@ -48,7 +48,7 @@ public class EvaluatorPanel extends JPanel {
         
         // Add tab change listener
         tabbedPane.addChangeListener(e -> {
-            if (tabbedPane.getSelectedIndex() == 3) { // Completed tab
+            if (tabbedPane.getSelectedIndex() == 3) {
                 loadCompletedEvaluations();
             }
         });
@@ -153,7 +153,7 @@ public class EvaluatorPanel extends JPanel {
         assignmentsTableModel = new DefaultTableModel(columnNames, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
-                return column == 4; // Only Action column is editable
+                return column == 4; 
             }
         };
         
@@ -205,7 +205,7 @@ public class EvaluatorPanel extends JPanel {
         completedTableModel = new DefaultTableModel(columnNames, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
-                return column == 5; // Only Action column is editable
+                return column == 5;
             }
         };
         
@@ -595,7 +595,6 @@ public class EvaluatorPanel extends JPanel {
                     int row = sourceTable.getSelectedRow();
                     if (row != -1) {
                         if (buttonText.equals("Evaluate")) {
-                            // Get submission ID and update currentSubmissionId
                             Object idValue = sourceTable.getValueAt(row, 0);
                             if (idValue instanceof Integer) {
                                 currentSubmissionId = (int) idValue;

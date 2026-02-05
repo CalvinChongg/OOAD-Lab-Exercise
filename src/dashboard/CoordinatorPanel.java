@@ -3,7 +3,7 @@ package dashboard;
 import dao.AssignmentDAO;
 import dao.ReportDAO;
 import dao.SessionDAO;
-import dao.SubmissionDAO; // Ensure this exists
+import dao.SubmissionDAO;
 import java.awt.*;
 import java.util.List;
 import javax.swing.*;
@@ -40,7 +40,7 @@ public class CoordinatorPanel extends JPanel {
         tabbedPane.addChangeListener(e -> {
             int index = tabbedPane.getSelectedIndex();
             if (index == 0) {
-                refreshDashboardStats(); // Refresh stats when clicking Dashboard
+                refreshDashboardStats(); // Refresh Dashboard
             } else if (index == 1) {
                 loadSessionsFromDB();
             } else if (index == 2) {
@@ -144,7 +144,7 @@ public class CoordinatorPanel extends JPanel {
         JPanel statsPanel = new JPanel(new GridLayout(1, 4, 15, 15)); // Changed to 1 row
         statsPanel.setBackground(Color.WHITE);
         
-        // Initialize labels as class variables to update them later
+        // Initialize labels as class variables
         totalSubLabel = new JLabel("0");
         oralSubLabel = new JLabel("0");
         posterSubLabel = new JLabel("0");
@@ -184,7 +184,6 @@ public class CoordinatorPanel extends JPanel {
         SubmissionDAO subDao = new SubmissionDAO();
         SessionDAO sessDao = new SessionDAO();
         
-        // These methods must be implemented in your DAOs
         totalSubLabel.setText(String.valueOf(subDao.getTotalSubmissionCount()));
         oralSubLabel.setText(String.valueOf(subDao.getSubmissionCountByType("ORAL")));
         posterSubLabel.setText(String.valueOf(subDao.getSubmissionCountByType("POSTER")));
@@ -219,7 +218,7 @@ public class CoordinatorPanel extends JPanel {
         
         sessionsTableModel = new DefaultTableModel(new String[]{"ID", "Name", "Date", "Time", "Type", "Venue", "Status"}, 0);
         sessionsTable = new JTable(sessionsTableModel);
-        loadSessionsFromDB(); // Load real data
+        loadSessionsFromDB(); // Load data
         
         panel.add(new JScrollPane(sessionsTable), BorderLayout.CENTER);
 
@@ -255,7 +254,6 @@ public class CoordinatorPanel extends JPanel {
                 return;
             }
 
-            // Extract ID from the "SES-001" format
             String idStr = (String) sessionsTableModel.getValueAt(selectedRow, 0);
             int sessionId = Integer.parseInt(idStr.replace("SES-", ""));
 
@@ -331,7 +329,7 @@ public class CoordinatorPanel extends JPanel {
             @Override public boolean isCellEditable(int row, int col) { return col == 6; }
         };
         
-        loadSubmissionsFromDB(); // Helper to refresh data
+        loadSubmissionsFromDB(); //refresh data
         
         submissionsTable = new JTable(submissionsTableModel);
         submissionsTable.setRowHeight(35);
@@ -361,7 +359,7 @@ public class CoordinatorPanel extends JPanel {
             if (confirm == JOptionPane.YES_OPTION) {
                 if (new SessionDAO().deleteSession(sessionId)) {
                     JOptionPane.showMessageDialog(this, "Session deleted successfully.");
-                    loadSessionsFromDB(); // Refresh the table
+                    loadSessionsFromDB();
                 } else {
                     JOptionPane.showMessageDialog(this, "Error deleting session.");
                 }
@@ -391,11 +389,11 @@ public class CoordinatorPanel extends JPanel {
 
                 Object[] tableRow = new Object[]{
                     row[0],             // Column 0: Submission ID
-                    actualUsername,      // Column 1: Corrected Username (ali/abu)
+                    actualUsername,     // Column 1: Username
                     row[2],             // Column 2: Research Title
                     row[3],             // Column 3: Presentation Type
                     row[4],             // Column 4: Supervisor Name
-                    row[5],             // Column 5: Status (e.g., ASSIGNED)
+                    row[5],             // Column 5: Status
                     "Review"            // Column 6: Action Button
                 };
                 submissionsTableModel.addRow(tableRow);
@@ -403,7 +401,6 @@ public class CoordinatorPanel extends JPanel {
         }
     }
 
-    // Helper method to link ID to Username manually
     private String getUsernameById(int id) {
         String username = "Unknown";
         String sql = "SELECT username FROM users WHERE id = ?";
@@ -422,7 +419,6 @@ public class CoordinatorPanel extends JPanel {
 
     private void generatePDFReport(JTable table, String reportTitle) {
         try {
-            // This command triggers the OS print dialog
             // Selecting "Microsoft Print to PDF" or "Save as PDF" generates the file
             boolean complete = table.print(JTable.PrintMode.FIT_WIDTH, 
                 new java.text.MessageFormat(reportTitle), 

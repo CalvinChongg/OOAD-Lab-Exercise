@@ -54,10 +54,6 @@ public class LoginPanel extends JPanel {
         gbc.gridy = 4; gbc.gridx = 0; gbc.gridwidth = 2;
         add(loginBtn, gbc);
 
-        // gbc.gridy = 5; gbc.gridwidth = 2;
-        // gbc.fill = GridBagConstraints.HORIZONTAL;
-        // add(testPanel, gbc);
-
         // Button Logic
         loginBtn.addActionListener(e -> {
             String uIn = userField.getText().trim();
@@ -72,11 +68,11 @@ public class LoginPanel extends JPanel {
             UserDAO dao = new UserDAO();
             
             if (dao.checkLogin(uIn, pIn)) {
-                // 1. Fetch the actual user data from the database
+                // 1. Fetch user data from the database
                 User user = dao.getUserData(uIn);
                 
                 if (user != null) {
-                    // 2. CRITICAL: Save this user to the MainFrame
+                    // 2. Save this user to the MainFrame
                     mainFrame.setLoggedInUser(user);
                     
                     // 3. Switch screens as normal

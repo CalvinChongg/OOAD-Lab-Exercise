@@ -73,7 +73,7 @@ public class SubmissionDAO {
             while (rs.next()) {
                 submissions.add(new Object[]{
                     rs.getInt("id"),
-                    rs.getInt("student_id"), // This is what getUsernameById uses
+                    rs.getInt("student_id"),
                     rs.getString("research_title"),
                     rs.getString("presentation_type"),
                     rs.getString("supervisor_name"),

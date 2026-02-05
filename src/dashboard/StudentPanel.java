@@ -49,7 +49,7 @@ public class StudentPanel extends JPanel {
     }
 
     public void loadMySubmissions() {
-        loadSubmissions(null); // Calls your existing logic with no event
+        loadSubmissions(null);
         updateStatistics();
     }
     
@@ -73,7 +73,7 @@ public class StudentPanel extends JPanel {
         leftPanel.add(title);
         leftPanel.add(subtitle);
         
-        // Right side: Logout button (MATCHING COORDINATOR STYLE)
+        // Right side: Logout button
         JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
         rightPanel.setOpaque(false);
         
@@ -253,7 +253,7 @@ public class StudentPanel extends JPanel {
         tableModel = new DefaultTableModel(columnNames, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
-                return column == 6; // Only Actions column is editable
+                return column == 6;
             }
         };
         
@@ -300,7 +300,6 @@ public class StudentPanel extends JPanel {
         // Clear existing data
         tableModel.setRowCount(0);
         
-        // In real implementation, get actual student ID from logged-in user
         int studentId = this.currentStudentId;
         
         SubmissionDAO dao = new SubmissionDAO();
@@ -398,7 +397,6 @@ public class StudentPanel extends JPanel {
 
     private void updateStatistics() {
         SubmissionDAO dao = new SubmissionDAO();
-        // These methods must exist in your SubmissionDAO
         int total = dao.getTotalStudentSubmissions(currentStudentId);
         int approved = dao.getSubmissionCountByStatus(currentStudentId, "APPROVED");
         int pending = dao.getSubmissionCountByStatus(currentStudentId, "PENDING");
@@ -416,7 +414,6 @@ public class StudentPanel extends JPanel {
             BorderFactory.createEmptyBorder(10, 10, 10, 10)
         ));
         
-        // Only add 3 cards now
         panel.add(createStatCard("Total Submissions", "0", new Color(52, 152, 219)));
         panel.add(createStatCard("Approved", "0", new Color(46, 204, 113)));
         panel.add(createStatCard("Pending", "0", new Color(230, 126, 34)));
@@ -493,8 +490,6 @@ public class StudentPanel extends JPanel {
             return;
         }
         
-        // In real implementation, get actual student ID from logged-in user
-        // For now, use a dummy ID (student1 has ID=5 in seeded data)
         int studentId = this.currentStudentId;
         
         SubmissionDAO dao = new SubmissionDAO();

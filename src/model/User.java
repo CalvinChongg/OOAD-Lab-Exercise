@@ -1,13 +1,12 @@
 package model;
 
 public abstract class User {
-    // Change 1: Field type to int
     protected int id; 
     protected String username;
     protected String password;
-    protected String role; // "STUDENT", "COORDINATOR", "EVALUATOR"
+    protected String role;
 
-    // Change 2: Constructor parameter to int
+    // Constructor
     public User(int id, String username, String password, String role) {
        this.id = id;
        this.username = username;
@@ -15,6 +14,7 @@ public abstract class User {
        this.role = role;
     }
 
+   //  Getter methods
     public String getUsername() {
        return username;
     }
@@ -27,7 +27,6 @@ public abstract class User {
        return role;
     }
 
-    // Change 3: Return type to int
     public int getId() {
        return id;
     }

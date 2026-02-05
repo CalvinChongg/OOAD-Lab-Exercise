@@ -10,7 +10,6 @@ public class MainFrame extends JFrame {
     private CardLayout cardLayout;
     private JPanel mainContainer;
 
-    // References to your panels so we can trigger refreshes
     private EvaluatorPanel evaluatorPanel;
     private CoordinatorPanel coordinatorPanel;
     private StudentPanel studentPanel;
@@ -24,7 +23,7 @@ public class MainFrame extends JFrame {
         cardLayout = new CardLayout();
         mainContainer = new JPanel(cardLayout);
 
-        // Initialize your specific panels
+        // Initialize panels
         evaluatorPanel = new EvaluatorPanel(this);
         coordinatorPanel = new CoordinatorPanel(this);
         studentPanel = new StudentPanel(this);
@@ -51,10 +50,10 @@ public class MainFrame extends JFrame {
                 coordinatorPanel.loadSubmissionsFromDB(); 
                 break;
             case "STUDENT":
-                // This is the bridge that prevents the ID 0 error
+                // prevent ID = 0 error
                 if (loggedInUser != null) {
                     studentPanel.setStudentId(loggedInUser.getId()); 
-                    studentPanel.loadMySubmissions(); // This ensures the student sees their own list
+                    studentPanel.loadMySubmissions();
                 }
                 break;
         }

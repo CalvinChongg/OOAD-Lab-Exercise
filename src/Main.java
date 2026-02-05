@@ -4,7 +4,7 @@ import javax.swing.SwingUtilities;
 
 public class Main {
     public static void main(String[] args) {
-        // 1. Initialize Database (Create table if missing)
+        // 1. Initialize Database
         SQLiteConnection.initializeDatabase();
         
         // 2. Launch the App

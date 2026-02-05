@@ -30,7 +30,7 @@ public class ReportDAO {
                     rank++,
                     rs.getString("research_title"),
                     rs.getString("username"),
-                    rs.getString("presentation_type"), // Updated this line
+                    rs.getString("presentation_type"),
                     String.format("%.2f", rs.getDouble("avg_score"))
                 });
             }
@@ -68,7 +68,7 @@ public class ReportDAO {
         String insertSql = "INSERT INTO awards (award_type, submission_id, winner_id, ceremony_date) VALUES (?, ?, ?, CURRENT_DATE)";
         
         try (Connection conn = SQLiteConnection.connect()) {
-            conn.setAutoCommit(false); // Start transaction
+            conn.setAutoCommit(false);
             
             try (PreparedStatement pstmt = conn.prepareStatement(insertSql)) {
                 // 1. Finalize Best Oral

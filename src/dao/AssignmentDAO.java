@@ -11,7 +11,6 @@ import java.util.List;
 
 public class AssignmentDAO {
     
-    // In AssignmentDAO.java
     public boolean assignToEvaluator(int sessionId, int submissionId, int evaluatorId) {
         String sql = "INSERT INTO session_assignments (session_id, submission_id, evaluator_id) VALUES (?, ?, ?)";
         try (Connection conn = SQLiteConnection.connect();
@@ -43,7 +42,7 @@ public class AssignmentDAO {
 
     // Converts the dropdown string back to a numeric ID
     public int getEvaluatorIdByName(String username) {
-        // We check username and ensure the role is 'evaluator' to prevent logic errors
+        // ensure role is Evaluator
         String sql = "SELECT id FROM users WHERE username = ? AND roles = 'evaluator'";
         try (Connection conn = SQLiteConnection.connect();
             PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -52,11 +51,11 @@ public class AssignmentDAO {
             ResultSet rs = pstmt.executeQuery();
             
             if (rs.next()) {
-                return rs.getInt("id"); // Returns the ID (e.g., 3 for 'evaluator')
+                return rs.getInt("id");
             }
         } catch (SQLException e) {
             e.printStackTrace();
         }
-        return -1; // Return -1 if not found
+        return -1;
     }
 }
