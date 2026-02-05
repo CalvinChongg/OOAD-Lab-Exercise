@@ -148,5 +148,48 @@ public class SubmissionDAO {
             if (rs.next()) return rs.getInt(1);
         } catch (SQLException e) { e.printStackTrace(); }
         return 0;
-}
+    }
+
+    public int getTotalStudentSubmissions(int studentId) {
+        String sql = "SELECT COUNT(*) FROM submissions WHERE student_id = ?";
+        try (java.sql.Connection conn = database.SQLiteConnection.connect();
+            java.sql.PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, studentId);
+            java.sql.ResultSet rs = pstmt.executeQuery();
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+        } catch (java.sql.SQLException e) {
+            e.printStackTrace();
+        }
+        return 0;
+    }
+
+    public int getSubmissionCountByStatus(int studentId, String status) {
+        String sql;
+        // If the UI asks for APPROVED, we also count ASSIGNED status
+        if (status.equalsIgnoreCase("APPROVED")) {
+            sql = "SELECT COUNT(*) FROM submissions WHERE student_id = ? AND status IN ('APPROVED', 'ASSIGNED')";
+        } else {
+            sql = "SELECT COUNT(*) FROM submissions WHERE student_id = ? AND status = ?";
+        }
+
+        try (java.sql.Connection conn = database.SQLiteConnection.connect();
+            java.sql.PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            
+            pstmt.setInt(1, studentId);
+            // Only set the second parameter if we are using the single-status query
+            if (!status.equalsIgnoreCase("APPROVED")) {
+                pstmt.setString(2, status);
+            }
+            
+            java.sql.ResultSet rs = pstmt.executeQuery();
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+        } catch (java.sql.SQLException e) {
+            e.printStackTrace();
+        }
+        return 0;
+    }
 }

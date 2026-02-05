@@ -16,6 +16,7 @@ public class StudentPanel extends JPanel {
     private JButton browseBtn, submitBtn, logoutBtn, refreshBtn;
     private JTable submissionsTable;
     private DefaultTableModel tableModel;
+    private JLabel totalStatLabel, approvedStatLabel, pendingStatLabel;
     private int currentStudentId;
     
     public StudentPanel(MainFrame mainFrame) {
@@ -49,6 +50,7 @@ public class StudentPanel extends JPanel {
 
     public void loadMySubmissions() {
         loadSubmissions(null); // Calls your existing logic with no event
+        updateStatistics();
     }
     
     private JPanel createHeaderPanel() {
@@ -330,6 +332,7 @@ public class StudentPanel extends JPanel {
                 tableModel.addRow(row);
             }
         }
+        updateStatistics();
     }
     
     private JPanel createFormField(String label, JTextField field, boolean required) {
@@ -392,7 +395,19 @@ public class StudentPanel extends JPanel {
         panel.add(instructions, BorderLayout.CENTER);
         return panel;
     }
-    
+
+    private void updateStatistics() {
+        SubmissionDAO dao = new SubmissionDAO();
+        // These methods must exist in your SubmissionDAO
+        int total = dao.getTotalStudentSubmissions(currentStudentId);
+        int approved = dao.getSubmissionCountByStatus(currentStudentId, "APPROVED");
+        int pending = dao.getSubmissionCountByStatus(currentStudentId, "PENDING");
+
+        if (totalStatLabel != null) totalStatLabel.setText(String.valueOf(total));
+        if (approvedStatLabel != null) approvedStatLabel.setText(String.valueOf(approved));
+        if (pendingStatLabel != null) pendingStatLabel.setText(String.valueOf(pending));
+    }
+        
     private JPanel createStatisticsPanel() {
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 20, 10));
         panel.setBackground(new Color(248, 249, 250));
@@ -401,11 +416,10 @@ public class StudentPanel extends JPanel {
             BorderFactory.createEmptyBorder(10, 10, 10, 10)
         ));
         
-        // Statistics cards
-        panel.add(createStatCard("Total Submissions", "3", new Color(52, 152, 219)));
-        panel.add(createStatCard("Approved", "2", new Color(46, 204, 113)));
-        panel.add(createStatCard("Pending", "1", new Color(230, 126, 34)));
-        panel.add(createStatCard("Upcoming", "1", new Color(155, 89, 182)));
+        // Only add 3 cards now
+        panel.add(createStatCard("Total Submissions", "0", new Color(52, 152, 219)));
+        panel.add(createStatCard("Approved", "0", new Color(46, 204, 113)));
+        panel.add(createStatCard("Pending", "0", new Color(230, 126, 34)));
         
         return panel;
     }
@@ -426,7 +440,12 @@ public class StudentPanel extends JPanel {
         JLabel valueLabel = new JLabel(value);
         valueLabel.setFont(new Font("Segoe UI", Font.BOLD, 24));
         valueLabel.setForeground(color);
-        
+
+        // LINKING LOGIC: Assign the label to the class-level variable
+        if (title.contains("Total")) totalStatLabel = valueLabel;
+        else if (title.contains("Approved")) approvedStatLabel = valueLabel;
+        else if (title.contains("Pending")) pendingStatLabel = valueLabel;
+
         card.add(titleLabel, BorderLayout.NORTH);
         card.add(valueLabel, BorderLayout.CENTER);
         
