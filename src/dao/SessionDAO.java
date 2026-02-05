@@ -151,4 +151,14 @@ public class SessionDAO {
         }
         return -1; // Return -1 if the session name is not found
     }
+
+    public int getTotalSessionCount() {
+        String sql = "SELECT COUNT(*) FROM sessions";
+        try (Connection conn = SQLiteConnection.connect();
+            Statement stmt = conn.createStatement();
+            ResultSet rs = stmt.executeQuery(sql)) {
+            if (rs.next()) return rs.getInt(1);
+        } catch (SQLException e) { e.printStackTrace(); }
+        return 0;
+    }
 }

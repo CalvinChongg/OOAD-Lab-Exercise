@@ -130,4 +130,25 @@ public class SubmissionDAO {
         }
         return assignments;
     }
+
+    public int getTotalSubmissionCount() {
+        String sql = "SELECT COUNT(*) FROM submissions";
+        try (Connection conn = SQLiteConnection.connect();
+            Statement stmt = conn.createStatement();
+            ResultSet rs = stmt.executeQuery(sql)) {
+            if (rs.next()) return rs.getInt(1);
+        } catch (SQLException e) { e.printStackTrace(); }
+        return 0;
+    }
+
+    public int getSubmissionCountByType(String type) {
+        String sql = "SELECT COUNT(*) FROM submissions WHERE presentation_type = ?";
+        try (Connection conn = SQLiteConnection.connect();
+            PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, type);
+            ResultSet rs = pstmt.executeQuery();
+            if (rs.next()) return rs.getInt(1);
+        } catch (SQLException e) { e.printStackTrace(); }
+        return 0;
+}
 }

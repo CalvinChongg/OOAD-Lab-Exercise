@@ -39,7 +39,9 @@ public class CoordinatorPanel extends JPanel {
 
         tabbedPane.addChangeListener(e -> {
             int index = tabbedPane.getSelectedIndex();
-            if (index == 1) {
+            if (index == 0) {
+                refreshDashboardStats(); // Refresh stats when clicking Dashboard
+            } else if (index == 1) {
                 loadSessionsFromDB();
             } else if (index == 2) {
                     loadSubmissionsFromDB();
@@ -112,49 +114,81 @@ public class CoordinatorPanel extends JPanel {
         return headerPanel;
     }
     
+    private JLabel totalSubLabel, oralSubLabel, posterSubLabel, sessionsLabel;
+
     private JPanel createDashboardPanel() {
         JPanel panel = new JPanel(new BorderLayout(15, 15));
         panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
         panel.setBackground(Color.WHITE);
         
+        // Header Overview Card
         JPanel overviewCard = new JPanel(new BorderLayout(10, 10));
         overviewCard.setBackground(new Color(41, 128, 185));
-        overviewCard.setBorder(new CompoundBorder(
-            new LineBorder(new Color(32, 102, 148), 2),
-            BorderFactory.createEmptyBorder(20, 20, 20, 20)
-        ));
+        overviewCard.setBorder(new CompoundBorder(new LineBorder(new Color(32, 102, 148), 2), BorderFactory.createEmptyBorder(20, 20, 20, 20)));
         
         JLabel overviewTitle = new JLabel("Seminar Overview");
         overviewTitle.setFont(new Font("Segoe UI", Font.BOLD, 20));
         overviewTitle.setForeground(Color.WHITE);
         
-        JTextArea overviewText = new JTextArea("Welcome, Coordinator! You can manage seminar sessions, review submissions, assign evaluators, and create the event schedule from this dashboard.");
+        JTextArea overviewText = new JTextArea("Welcome, Coordinator! This dashboard provides real-time tracking of seminar submissions and active sessions.");
         overviewText.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         overviewText.setForeground(Color.WHITE);
         overviewText.setEditable(false);
-        overviewText.setLineWrap(true);
-        overviewText.setWrapStyleWord(true);
         overviewText.setOpaque(false);
         
         overviewCard.add(overviewTitle, BorderLayout.NORTH);
         overviewCard.add(overviewText, BorderLayout.CENTER);
         panel.add(overviewCard, BorderLayout.NORTH);
         
-        JPanel statsPanel = new JPanel(new GridLayout(2, 4, 15, 15));
-        statsPanel.setBorder(BorderFactory.createEmptyBorder(20, 0, 0, 0));
+        // Stats Grid (Total, Oral, Poster, Sessions)
+        JPanel statsPanel = new JPanel(new GridLayout(1, 4, 15, 15)); // Changed to 1 row
         statsPanel.setBackground(Color.WHITE);
         
-        statsPanel.add(createCoordStatCard("Total Submissions", "89", new Color(41, 128, 185)));
-        statsPanel.add(createCoordStatCard("Pending Review", "23", new Color(230, 126, 34)));
-        statsPanel.add(createCoordStatCard("Sessions Created", "15", new Color(46, 204, 113)));
-        statsPanel.add(createCoordStatCard("Evaluators", "12", new Color(155, 89, 182)));
-        statsPanel.add(createCoordStatCard("Oral Presentations", "45", new Color(52, 73, 94)));
-        statsPanel.add(createCoordStatCard("Poster Presentations", "44", new Color(22, 160, 133)));
-        statsPanel.add(createCoordStatCard("Venues Booked", "3", new Color(231, 76, 60)));
-        statsPanel.add(createCoordStatCard("Days to Event", "45", new Color(142, 68, 173)));
+        // Initialize labels as class variables to update them later
+        totalSubLabel = new JLabel("0");
+        oralSubLabel = new JLabel("0");
+        posterSubLabel = new JLabel("0");
+        sessionsLabel = new JLabel("0");
+
+        statsPanel.add(createCoordStatCard("Total Submissions", totalSubLabel, new Color(41, 128, 185)));
+        statsPanel.add(createCoordStatCard("Oral Presentations", oralSubLabel, new Color(52, 152, 219)));
+        statsPanel.add(createCoordStatCard("Poster Presentations", posterSubLabel, new Color(46, 204, 113)));
+        statsPanel.add(createCoordStatCard("Sessions Created", sessionsLabel, new Color(155, 89, 182)));
         
         panel.add(statsPanel, BorderLayout.CENTER);
+        
+        // Initial data load
+        refreshDashboardStats();
+        
         return panel;
+    }
+
+    // Updated Helper to accept JLabel instead of String for dynamic updates
+    private JPanel createCoordStatCard(String title, JLabel valueLabel, Color color) {
+        JPanel card = new JPanel(new BorderLayout(5, 5));
+        card.setBackground(Color.WHITE);
+        card.setBorder(new CompoundBorder(new LineBorder(new Color(220, 220, 220), 1), BorderFactory.createEmptyBorder(15, 15, 15, 15)));
+        
+        JLabel titleLabel = new JLabel(title);
+        titleLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        
+        valueLabel.setFont(new Font("Segoe UI", Font.BOLD, 32));
+        valueLabel.setForeground(color);
+        
+        card.add(titleLabel, BorderLayout.NORTH);
+        card.add(valueLabel, BorderLayout.CENTER);
+        return card;
+    }
+
+    public void refreshDashboardStats() {
+        SubmissionDAO subDao = new SubmissionDAO();
+        SessionDAO sessDao = new SessionDAO();
+        
+        // These methods must be implemented in your DAOs
+        totalSubLabel.setText(String.valueOf(subDao.getTotalSubmissionCount()));
+        oralSubLabel.setText(String.valueOf(subDao.getSubmissionCountByType("ORAL")));
+        posterSubLabel.setText(String.valueOf(subDao.getSubmissionCountByType("POSTER")));
+        sessionsLabel.setText(String.valueOf(sessDao.getTotalSessionCount()));
     }
     
     private JPanel createSessionManagementPanel() {
@@ -207,8 +241,7 @@ public class CoordinatorPanel extends JPanel {
 
             int option = JOptionPane.showConfirmDialog(this, message, "Create New Session", JOptionPane.OK_CANCEL_OPTION);
             if (option == JOptionPane.OK_OPTION) {
-                if (new SessionDAO().createSession(nameField.getText(), dateField.getText(), timeField.getText(), 
-                                                (String)typeBox.getSelectedItem(), venueField.getText())) {
+                if (new SessionDAO().createSession(nameField.getText(), dateField.getText(), timeField.getText(), (String)typeBox.getSelectedItem(), venueField.getText())) {
                     JOptionPane.showMessageDialog(this, "Session Created Successfully!");
                     loadSessionsFromDB();
                 }
@@ -256,11 +289,9 @@ public class CoordinatorPanel extends JPanel {
             int selectedRow = submissionsTable.getSelectedRow();
             int submissionId = (int) submissionsTableModel.getValueAt(selectedRow, 0);
 
-            // 1. Get Evaluator ID from User
             String evalIdStr = JOptionPane.showInputDialog(CoordinatorPanel.this, 
                 "Enter Evaluator ID for Submission #" + submissionId + ":");
             
-            // 2. Get Session ID from User (Since you just made sessions like 'SESA')
             String sessIdStr = JOptionPane.showInputDialog(CoordinatorPanel.this, 
                 "Enter Session ID (e.g., 1 for SESA):");
 
@@ -294,20 +325,7 @@ public class CoordinatorPanel extends JPanel {
         JLabel title = new JLabel("Submission Review");
         title.setFont(new Font("Segoe UI", Font.BOLD, 18));
         title.setForeground(new Color(52, 73, 94));
-        
-        // JPanel filterPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 10));
-        // filterPanel.setOpaque(false);
-        // filterPanel.add(new JLabel("Filter by:"));
-        // filterPanel.add(new JComboBox<>(new String[]{"All", "Pending", "Approved", "Rejected"}));
-        // filterPanel.add(createActionButton("Apply Filter", new Color(52, 152, 219)));
-        
-        // JPanel northPanel = new JPanel(new BorderLayout());
-        // northPanel.setOpaque(false);
-        // northPanel.add(title, BorderLayout.WEST);
-        // northPanel.add(filterPanel, BorderLayout.EAST);
-        // panel.add(northPanel, BorderLayout.NORTH);
-        
-        // INTEGRATED DATABASE DATA
+    
         String[] columnNames = {"ID", "Student", "Title", "Type", "Supervisor", "Status", "Action"};
         submissionsTableModel = new DefaultTableModel(columnNames, 0) {
             @Override public boolean isCellEditable(int row, int col) { return col == 6; }
@@ -440,26 +458,6 @@ public class CoordinatorPanel extends JPanel {
         }
     }
     
-    // private JPanel createAwardsPanel() {
-    //     JPanel panel = new JPanel(new BorderLayout(15, 15));
-    //     panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
-    //     panel.setBackground(Color.WHITE);
-        
-    //     JLabel title = new JLabel("Award Nomination & Evaluation Results");
-    //     title.setFont(new Font("Segoe UI", Font.BOLD, 18));
-        
-    //     JPanel awardsPanel = new JPanel(new GridLayout(1, 3, 15, 15));
-    //     awardsPanel.setBackground(Color.WHITE);
-    //     awardsPanel.add(createAwardCard("🏆 Best Oral", "Top Oral Presentation", new Color(255, 193, 7), "John Doe (9.2/10)"));
-    //     awardsPanel.add(createAwardCard("📊 Best Poster", "Top Poster Presentation", new Color(33, 150, 243), "Jane Smith (9.5/10)"));
-    //     awardsPanel.add(createAwardCard("👥 People's Choice", "Attendee Vote", new Color(156, 39, 176), "Open"));
-        
-    //     panel.add(title, BorderLayout.NORTH);
-    //     panel.add(awardsPanel, BorderLayout.CENTER);
-    //     panel.add(createActionButton("Finalize Award Winners", new Color(46, 204, 113)), BorderLayout.SOUTH);
-        
-    //     return panel;
-    // }
     public void loadAwardsFromDB() {
         ReportDAO dao = new ReportDAO();
         
@@ -656,15 +654,6 @@ public class CoordinatorPanel extends JPanel {
         card.add(new JLabel(title), BorderLayout.NORTH);
         JLabel val = new JLabel(value); val.setFont(new Font("Segoe UI", Font.BOLD, 24)); val.setForeground(color);
         card.add(val, BorderLayout.CENTER);
-        return card;
-    }
-    
-    private JPanel createScheduleCard(String day, String venue, String schedule) {
-        JPanel card = new JPanel(new BorderLayout(10, 10));
-        card.setBackground(Color.WHITE);
-        card.setBorder(new CompoundBorder(new LineBorder(new Color(41, 128, 185), 1), BorderFactory.createEmptyBorder(15, 15, 15, 15)));
-        card.add(new JLabel(day), BorderLayout.NORTH);
-        card.add(new JTextArea(schedule), BorderLayout.CENTER);
         return card;
     }
     
