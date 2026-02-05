@@ -119,14 +119,6 @@ public class SQLiteConnection {
             ('evaluator', 'evaluator123', 'EVALUATOR');
         """;
 
-        String seedPosterBoards = """
-            INSERT OR IGNORE INTO poster_boards (board_id, location) VALUES
-            ('PB-001', 'Main Hall - Aisle 1'),
-            ('PB-002', 'Main Hall - Aisle 1'),
-            ('PB-003', 'Main Hall - Aisle 2'),
-            ('PB-004', 'Main Hall - Aisle 2'),
-            ('PB-005', 'Exhibition Area - North');
-            """;
 
         try (var conn = connect();
              var stmt = conn.createStatement()) {
@@ -141,7 +133,6 @@ public class SQLiteConnection {
             
             // Seed initial data
             stmt.execute(seedUsers);
-            stmt.execute(seedPosterBoards);
             
             System.out.println("Database initialized with all required tables");
         } catch (SQLException e) {
