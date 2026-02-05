@@ -42,7 +42,10 @@ public class MainFrame extends JFrame {
         // refresh data
         switch (screenName) {
             case "EVALUATOR":
-                evaluatorPanel.loadAssignments(); 
+                if (loggedInUser != null) {
+                    evaluatorPanel.setEvaluatorId(loggedInUser.getId()); // Pass the real ID
+                    evaluatorPanel.loadAssignments(); // Refresh the table
+                }
                 break;
             case "COORDINATOR":
                 coordinatorPanel.loadSubmissionsFromDB(); 

@@ -14,7 +14,12 @@ public class EvaluatorPanel extends JPanel {
     private DefaultTableModel assignmentsTableModel, completedTableModel;
     // We will use assignmentsTableModel instead of the generic tableModel variable
     private int currentSubmissionId = -1; 
-    private int currentEvaluatorId = 3;
+    private int currentEvaluatorId; 
+
+    public void setEvaluatorId(int id) {
+        this.currentEvaluatorId = id;
+    }
+    
     
     public EvaluatorPanel(MainFrame mainFrame) {
         this.mainFrame = mainFrame;
@@ -40,16 +45,20 @@ public class EvaluatorPanel extends JPanel {
     }
 
     public void loadAssignments() {
-        // Pointing to assignmentsTableModel specifically
         if (assignmentsTableModel != null) {
-            assignmentsTableModel.setRowCount(0); // Clear mock data
+            assignmentsTableModel.setRowCount(0); 
 
             SubmissionDAO dao = new SubmissionDAO();
-            // Use the evaluator ID (3) to fetch real assignments
+            // Now using the dynamic ID passed from the login process
             List<Object[]> assignments = dao.getAssignmentsForEvaluator(currentEvaluatorId);
 
-            for (Object[] row : assignments) {
-                assignmentsTableModel.addRow(row);
+            if (assignments.isEmpty()) {
+                // Optional: Add a placeholder if nothing is assigned to THIS evaluator
+                assignmentsTableModel.addRow(new Object[]{"", "No assignments found", "", "", ""});
+            } else {
+                for (Object[] row : assignments) {
+                    assignmentsTableModel.addRow(row);
+                }
             }
         }
     }
