@@ -87,17 +87,6 @@ public class SQLiteConnection {
             );
             """;
 
-        // Create Poster Boards Table
-        String createPosterBoardsTable = """
-            CREATE TABLE IF NOT EXISTS poster_boards (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                board_id TEXT NOT NULL UNIQUE,
-                location TEXT,
-                submission_id INTEGER UNIQUE,
-                FOREIGN KEY (submission_id) REFERENCES submissions(id) ON DELETE SET NULL
-            );
-            """;
-
         // Create Awards Table
         String createAwardsTable = """
             CREATE TABLE IF NOT EXISTS awards (
@@ -128,7 +117,6 @@ public class SQLiteConnection {
             stmt.execute(createSessionsTable);
             stmt.execute(createSessionAssignmentsTable);
             stmt.execute(createEvaluationsTable);
-            stmt.execute(createPosterBoardsTable);
             stmt.execute(createAwardsTable);
             
             // Seed initial data
