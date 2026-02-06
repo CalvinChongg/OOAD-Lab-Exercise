@@ -47,20 +47,19 @@ public class ReportDAO {
             FROM submissions s
             JOIN evaluations e ON s.id = e.submission_id
             JOIN users u ON s.student_id = u.id
-            WHERE s.presentation_type = ?
+            WHERE s.presentation_type = ? 
             GROUP BY s.id
             ORDER BY avg_score DESC LIMIT 1
         """;
         try (Connection conn = SQLiteConnection.connect();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setString(1, type);
+            PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            // Force uppercase to match DB
+            pstmt.setString(1, type.toUpperCase()); 
             ResultSet rs = pstmt.executeQuery();
             if (rs.next()) {
-                return rs.getString("username") + " (" + String.format("%.1f", rs.getDouble("avg_score")) + ")";
+                return rs.getString("username") + " (" + String.format("%.2f", rs.getDouble("avg_score")) + ")";
             }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+        } catch (SQLException e) { e.printStackTrace(); }
         return "TBD";
     }
 
@@ -118,5 +117,24 @@ public class ReportDAO {
             }
         } catch (SQLException e) { e.printStackTrace(); }
         return null;
+    }
+
+    public String getPeoplesChoice() {
+        String sql = """
+            SELECT u.username, AVG(e.overall_score) as avg_score
+            FROM submissions s
+            JOIN evaluations e ON s.id = e.submission_id
+            JOIN users u ON s.student_id = u.id
+            GROUP BY s.id
+            ORDER BY avg_score DESC LIMIT 1
+        """;
+        try (Connection conn = SQLiteConnection.connect();
+            Statement stmt = conn.createStatement();
+            ResultSet rs = stmt.executeQuery(sql)) {
+            if (rs.next()) {
+                return rs.getString("username") + " (" + String.format("%.2f", rs.getDouble("avg_score")) + ")";
+            }
+        } catch (SQLException e) { e.printStackTrace(); }
+        return "TBD";
     }
 }

@@ -496,15 +496,18 @@ public class CoordinatorPanel extends JPanel {
     private void updateAwardCards() {
         ReportDAO dao = new ReportDAO();
         
-        String oralWinner = dao.getFinalizedWinner("BEST_ORAL");
-        String posterWinner = dao.getFinalizedWinner("BEST_POSTER");
+        // Fetch live winners from the DAO
+        String oralWinner = dao.getWinner("ORAL");
+        String posterWinner = dao.getWinner("POSTER");
+        String peopleChoice = dao.getPeoplesChoice(); // Top score overall
         
         if (awardsCardsPanel != null) {
             awardsCardsPanel.removeAll();
             
+            // Re-add cards with actual data
             awardsCardsPanel.add(createAwardCard("🏆 Best Oral", "Top Oral Presentation", new Color(255, 193, 7), oralWinner));
             awardsCardsPanel.add(createAwardCard("📊 Best Poster", "Top Poster Presentation", new Color(33, 150, 243), posterWinner));
-            awardsCardsPanel.add(createAwardCard("👥 People's Choice", "Attendee Vote", new Color(156, 39, 176), "Open"));
+            awardsCardsPanel.add(createAwardCard("👥 People's Choice", "Top Overall Score", new Color(156, 39, 176), peopleChoice));
             
             awardsCardsPanel.revalidate();
             awardsCardsPanel.repaint();
@@ -553,17 +556,15 @@ public class CoordinatorPanel extends JPanel {
                 "Confirm Finalization", JOptionPane.YES_NO_OPTION);
                 
             if (confirm == JOptionPane.YES_OPTION) {
-                if (new ReportDAO().finalizeAwards()) {
-                    JOptionPane.showMessageDialog(this, "Awards saved to database successfully!");
-                    loadAwardsFromDB(); // Refresh UI to show the new winners in the cards
+                ReportDAO dao = new ReportDAO();
+                if (dao.finalizeAwards()) {
+                    JOptionPane.showMessageDialog(this, "Awards finalized and saved!");
+                    // CRITICAL: Call the update methods to refresh the UI
+                    loadAwardsFromDB(); 
+                    updateAwardCards(); 
                 } else {
-                    JOptionPane.showMessageDialog(this, "Error: Could not save awards. Check if winners exist.");
+                    JOptionPane.showMessageDialog(this, "Error: Could not finalize. Ensure evaluations exist.");
                 }
-            }
-
-            if (new ReportDAO().finalizeAwards()) {
-                JOptionPane.showMessageDialog(this, "Awards finalized!");
-                updateAwardCards(); 
             }
         });
 
